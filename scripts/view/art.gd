@@ -53,6 +53,11 @@ const SHORT_LABELS := {
 	"argo_shipyard": "Argo",
 }
 
+## Les sprites sont rendus en 2x (voir tools/art) : on les dessine à moitié taille pour rester nets au zoom.
+const SPRITE_SCALE := 0.5
+## Nombre de variantes de sol (motif périodique de K x K tuiles).
+const TERRAIN_K := 4
+
 static var _textures := {}
 
 
@@ -67,6 +72,24 @@ static func texture(folder: String, name: String) -> Texture2D:
 		tex = load(path)
 	_textures[key] = tex
 	return tex
+
+
+## Dessine un sprite dont le bas-milieu est posé en bottom.
+static func draw_sprite(ci: CanvasItem, tex: Texture2D, bottom: Vector2) -> void:
+	var size := tex.get_size() * SPRITE_SCALE
+	ci.draw_texture_rect(tex, Rect2(bottom - Vector2(size.x * 0.5, size.y), size), false)
+
+
+## Hauteur à l'écran d'un sprite (0 s'il n'existe pas).
+static func sprite_height(tex: Texture2D) -> float:
+	return tex.get_height() * SPRITE_SCALE if tex != null else 0.0
+
+
+## Sol de la tuile p : variante périodique si elle existe, sinon texture unique.
+static func terrain_texture(t: int, p: Vector2i) -> Texture2D:
+	var v := posmod(p.x, TERRAIN_K) + posmod(p.y, TERRAIN_K) * TERRAIN_K
+	var tex := texture("terrain", "%d_%d" % [t, v])
+	return tex if tex != null else texture("terrain", str(t))
 
 
 static func building_color(def: Dictionary, level: int = 0) -> Color:

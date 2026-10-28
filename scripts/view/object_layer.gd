@@ -3,6 +3,7 @@ extends Node2D
 
 const Iso = preload("res://scripts/view/iso.gd")
 const Art = preload("res://scripts/view/art.gd")
+const Defs = preload("res://scripts/sim/defs.gd")
 
 var game
 
@@ -19,6 +20,7 @@ func _draw() -> void:
 	for b in city.buildings.values():
 		items.append([float(b.pos.x + b.pos.y + 2 * b.size) - 0.5, 0, b])
 	var frac: float = game.walker_frac()
+	_add_props(city, items)
 	for w in city.walkers.values():
 		var t: float = clampf((w.move_t + frac) / float(city.WALKER_STEP_TICKS), 0.0, 1.0)
 		var p: Vector2 = Vector2(w.prev).lerp(Vector2(w.pos), t) + Vector2(0.5, 0.5)
@@ -27,19 +29,64 @@ func _draw() -> void:
 	for it in items:
 		if it[1] == 0:
 			_draw_building(it[2])
-		else:
+		elif it[1] == 1:
 			_draw_walker(it[2], it[3])
+		else:
+			Art.draw_sprite(self, it[2], Iso.to_screen(Vector2(it[3]) + Vector2(1, 1)))
 	_draw_preview()
+
+
+## Arbres des forêts et blocs des rochers, visibles à l'écran seulement, triés avec le reste.
+func _add_props(city, items: Array) -> void:
+	var view := get_canvas_transform().affine_inverse() * get_viewport_rect()
+	view = view.grow(64.0)
+	for y in city.height:
+		for x in city.width:
+			var p := Vector2i(x, y)
+			var t: int = city.terrain[city.idx(p)]
+			if t != Defs.T_FOREST and t != Defs.T_ROCK:
+				continue
+			if not view.has_point(Iso.to_screen(Vector2(p) + Vector2(0.5, 0.5))):
+				continue
+			if city.road_at(p) != 0 or city.building_at(p) != null:
+				continue
+			var h: int = x * 7 + y * 13 + (x * y) % 5
+			var tex: Texture2D = Art.texture("props", "forest_%d" % (h % 4)) if t == Defs.T_FOREST else Art.texture("props", "rock_%d" % (h % 3))
+			if tex != null:
+				items.append([float(x + y + 2) - 0.5, 2, tex, p])
+
+
+func _building_texture(b) -> Texture2D:
+	if b.kind() == "house":
+		if b.pop == 0:
+			var empty := Art.texture("buildings", "house_empty")
+			if empty != null:
+				return empty
+		return Art.texture("buildings", "%s_%d" % [b.type, b.level])
+	if b.kind() == "monument" and not b.complete:
+		var stage := Art.texture("buildings", "%s_s%d" % [b.type, b.stage])
+		if stage == null:
+			stage = Art.texture("buildings", "monument_s%d" % b.stage)
+		if stage != null:
+			return stage
+	return Art.texture("buildings", b.type)
+
+
+## Hauteur du haut du bâtiment au-dessus du centre de son emprise (pour les icônes d'alerte).
+func _top_height(b, tex: Texture2D) -> float:
+	if tex == null:
+		return Art.building_height(b)
+	return maxf(Art.sprite_height(tex) - b.size * Iso.TH * 0.5 - 10.0, 10.0)
 
 
 func _draw_building(b) -> void:
 	var city = game.city
 	var d: Dictionary = b.def
 	var n: float = b.size
-	var tex := Art.texture("buildings", "%s_%d" % [b.type, b.level]) if b.kind() == "house" else Art.texture("buildings", b.type)
+	var tex := _building_texture(b)
 	var bottom := Iso.to_screen(Vector2(b.pos) + Vector2(n, n))
 	if tex != null:
-		draw_texture(tex, bottom - Vector2(tex.get_width() * 0.5, tex.get_height()))
+		Art.draw_sprite(self, tex, bottom)
 	else:
 		var h := Art.building_height(b)
 		_draw_box(Vector2(b.pos), n, h, Art.building_color(d, b.level))
@@ -62,11 +109,11 @@ func _draw_building(b) -> void:
 	if b.kind() == "house" and city.access_tiles(b, city.HOUSE_ROAD_RADIUS).is_empty():
 		problem = true
 	if problem:
-		var c := Iso.to_screen(Vector2(b.pos) + Vector2(n, n) * 0.5) - Vector2(0, Art.building_height(b) + 14)
+		var c := Iso.to_screen(Vector2(b.pos) + Vector2(n, n) * 0.5) - Vector2(0, _top_height(b, tex) + 14)
 		draw_circle(c, 7.0, Color("#c0392b"))
 		draw_string(ThemeDB.fallback_font, c + Vector2(-3, 5), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	if b.risk >= 70.0:
-		var c2 := Iso.to_screen(Vector2(b.pos) + Vector2(n, n) * 0.5) - Vector2(-10, Art.building_height(b) + 12)
+		var c2 := Iso.to_screen(Vector2(b.pos) + Vector2(n, n) * 0.5) - Vector2(-10, _top_height(b, tex) + 12)
 		draw_circle(c2, 5.0, Color("#ff8c1a"))
 
 
@@ -122,7 +169,7 @@ func _draw_walker(w, p: Vector2) -> void:
 	var s := Iso.to_screen(p)
 	var tex := Art.texture("walkers", key)
 	if tex != null:
-		draw_texture(tex, s - Vector2(tex.get_width() * 0.5, tex.get_height()))
+		Art.draw_sprite(self, tex, s)
 		return
 	if w.kind == "cart":
 		draw_rect(Rect2(s + Vector2(-6, -9), Vector2(12, 8)), col)

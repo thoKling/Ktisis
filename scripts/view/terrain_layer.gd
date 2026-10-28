@@ -44,9 +44,11 @@ func _draw_tile(p: Vector2i) -> void:
 	var h := float((p.x * 73856093) ^ (p.y * 19349663)) / 2147483647.0
 	base = base.darkened(fposmod(h, 1.0) * 0.06)
 	var poly := Iso.diamond(Vector2(p))
-	var tex := Art.texture("terrain", str(t))
+	var tex := Art.terrain_texture(t, p)
 	if tex != null:
-		draw_texture(tex, Iso.to_screen(Vector2(p)) - Vector2(Iso.TW * 0.5, 0))
+		draw_texture_rect(tex, Rect2(Iso.to_screen(Vector2(p)) - Vector2(Iso.TW * 0.5, 0), Vector2(Iso.TW, Iso.TH)), false)
+		if t == Defs.T_WATER:
+			_draw_shores(p)
 	else:
 		draw_colored_polygon(poly, base)
 		if t == Defs.T_FOREST:
@@ -60,12 +62,25 @@ func _draw_tile(p: Vector2i) -> void:
 		_draw_road(p, r)
 
 
+## Sable et écume sur les bords d'une tuile d'eau qui touchent la terre.
+func _draw_shores(p: Vector2i) -> void:
+	var dirs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	for i in 4:
+		var q: Vector2i = p + dirs[i]
+		if not city.in_bounds(q) or city.terrain[city.idx(q)] == Defs.T_WATER:
+			continue
+		var tex := Art.texture("terrain", "shore_%d" % (1 << i))
+		if tex != null:
+			draw_texture_rect(tex, Rect2(Iso.to_screen(Vector2(p)) - Vector2(Iso.TW * 0.5, 0), Vector2(Iso.TW, Iso.TH)), false)
+
+
 func _draw_road(p: Vector2i, r: int) -> void:
 	var mask: int = city.road_mask(p)
 	var tex := Art.texture("roads", "road_%d" % mask)
 	var c := Iso.to_screen(Vector2(p) + Vector2(0.5, 0.5))
 	if tex != null:
-		draw_texture(tex, c - tex.get_size() * 0.5)
+		var size := tex.get_size() * Art.SPRITE_SCALE
+		draw_texture_rect(tex, Rect2(c - size * 0.5, size), false)
 	else:
 		# La forme découle des voisins : droite, virage, T ou carrefour.
 		var offsets := [Vector2(16, 8), Vector2(-16, -8), Vector2(-16, 8), Vector2(16, -8)]

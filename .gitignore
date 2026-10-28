@@ -5,3 +5,5 @@ export/
 # Outils
 godot
 *.zip
+# Rendus Blender
+tools/art/__pycache__/
