@@ -68,6 +68,7 @@ def hex_rgb(h):
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     _MATS.clear()
+    _RND.seed(1)
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
@@ -122,7 +123,12 @@ def render(path, n, height_px=None, crop=True, ground=True, extra_w=0):
     cam.rotation_euler = CAM_ROT
     sc.camera = cam
     if ground:
-        bpy.ops.mesh.primitive_plane_add(size=60, location=(n / 2, -n / 2, -0.001))
+        # Comme dans les city builders classiques, l'ombre ne sort jamais de l'emprise :
+        # le plan qui la reçoit a exactement la taille du bâtiment.
+        if n >= 1:
+            bpy.ops.mesh.primitive_plane_add(size=n, location=(n / 2, -n / 2, -0.001))
+        else:
+            bpy.ops.mesh.primitive_plane_add(size=0.35, location=(n, -n, -0.001))
         g = bpy.context.object
         g.is_shadow_catcher = True
         g.name = "sol_ombres"
@@ -193,7 +199,25 @@ def mat(name, color=None, rough=0.85, noise=0.08, bump=0.0, scale=40.0, kind=Non
         ramp.color_ramp.elements[1].position = 0.7
         nt.links.new(tex.outputs["Object"], nz.inputs[0])
         nt.links.new(nz.outputs["Fac"], ramp.inputs[0])
-        nt.links.new(ramp.outputs[0], bsdf.inputs["Base Color"])
+        # Patine : le bas de chaque volume est un peu plus sombre (terre, éclaboussures).
+        sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+        nt.links.new(tex.outputs["Generated"], sep.inputs[0])
+        g = nt.nodes.new("ShaderNodeMapRange")
+        g.inputs["From Min"].default_value = 0.0
+        g.inputs["From Max"].default_value = 0.35
+        g.inputs["To Min"].default_value = 0.8
+        g.inputs["To Max"].default_value = 1.0
+        nt.links.new(sep.outputs["Z"], g.inputs["Value"])
+        mul = nt.nodes.new("ShaderNodeMix")
+        mul.data_type = "RGBA"
+        mul.blend_type = "MULTIPLY"
+        mul.inputs["Factor"].default_value = 1.0
+        comb = nt.nodes.new("ShaderNodeCombineXYZ")
+        for k in ("X", "Y", "Z"):
+            nt.links.new(g.outputs["Result"], comb.inputs[k])
+        nt.links.new(ramp.outputs[0], mul.inputs[6])
+        nt.links.new(comb.outputs[0], mul.inputs[7])
+        nt.links.new(mul.outputs[2], bsdf.inputs["Base Color"])
     else:
         bsdf.inputs["Base Color"].default_value = base
     if emit > 0:
@@ -219,6 +243,9 @@ def M(name, **kw):
 
 # --------------------------------------------------------------------------- primitives
 
+WONKY = 0.007
+_RND = random.Random(1)
+
 def _link(obj, material):
     if material is not None:
         if isinstance(material, str):
@@ -236,10 +263,19 @@ def box(x0, y0, z0, x1, y1, z1, material=None, bevel=0.0):
     o = bpy.context.object
     o.scale = (x1 - x0, y1 - y0, z1 - z0)
     bpy.ops.object.transform_apply(scale=True)
+    dmin = min(x1 - x0, y1 - y0, z1 - z0)
+    if WONKY and dmin > 0.06:
+        # Fait main : le haut des volumes penche à peine, rien n'est parfaitement d'équerre.
+        for v in o.data.vertices:
+            if v.co.z > 0:
+                v.co.x += _RND.uniform(-1, 1) * WONKY
+                v.co.y += _RND.uniform(-1, 1) * WONKY
+    if bevel <= 0 and dmin > 0.004:
+        bevel = min(0.012, dmin * 0.3)
     if bevel > 0:
         md = o.modifiers.new("b", "BEVEL")
         md.width = bevel
-        md.segments = 1
+        md.segments = 2
     return _link(o, material)
 
 
@@ -328,10 +364,16 @@ def prism_roof(tx0, ty0, tx1, ty1, z, rise, along="x", material="terracotta", ov
     return r
 
 
+ROOF_SHADES = ("#c2673f", "#b95c37", "#cc7448", "#ad5533", "#c86a40")
+
+
 def _imbrices(x0, y0, x1, y1, z, rise, along, material):
-    """Rangées de tuiles couvre-joints, du faîtage à l'égout, sur les deux pans."""
-    step = 0.11
-    rad = 0.022
+    """Rangées de tuiles couvre-joints aux teintes variées, faîtières et antéfixes le long de l'égout."""
+    step = 0.1
+    rad = 0.021
+    shades = [M("tuile%d" % k, color=c, noise=0.12, scale=12) for k, c in enumerate(ROOF_SHADES)]
+    ante = M("antefixe", color="#e9dcc0", noise=0.05)
+    fascia = M("wood_dark")
     if along == "x":
         ym = (y0 + y1) / 2
         n = int((x1 - x0) / step)
@@ -339,8 +381,10 @@ def _imbrices(x0, y0, x1, y1, z, rise, along, material):
         for i in range(n):
             x = x0 + off + i * step
             for ya, yb in ((y0, ym), (y1, ym)):
-                _tile_row(T(x, ya, z), T(x, yb, z + rise), rad, material)
-        _tile_row(T(x0, ym, z + rise), T(x1, ym, z + rise), rad * 1.6, material)
+                _tile_row(T(x, ya, z), T(x, yb, z + rise), rad, _RND.choice(shades))
+            _antefix(x, y1, z, ante, "y")
+        _tile_row(T(x0, ym, z + rise), T(x1, ym, z + rise), rad * 1.7, material)
+        box(x0, -y1 - 0.004, z - 0.04, x1, -y1 + 0.02, z, fascia, bevel=0.003)
     else:
         xm = (x0 + x1) / 2
         n = int((y1 - y0) / step)
@@ -348,8 +392,19 @@ def _imbrices(x0, y0, x1, y1, z, rise, along, material):
         for i in range(n):
             y = y0 + off + i * step
             for xa, xb in ((x0, xm), (x1, xm)):
-                _tile_row(T(xa, y, z), T(xb, y, z + rise), rad, material)
-        _tile_row(T(xm, y0, z + rise), T(xm, y1, z + rise), rad * 1.6, material)
+                _tile_row(T(xa, y, z), T(xb, y, z + rise), rad, _RND.choice(shades))
+            _antefix(x1, y, z, ante, "x")
+        _tile_row(T(xm, y0, z + rise), T(xm, y1, z + rise), rad * 1.7, material)
+        box(x1 - 0.02, -y1, z - 0.04, x1 + 0.004, -y0, z, fascia, bevel=0.003)
+
+
+def _antefix(tx, ty, z, material, face):
+    """Petite palmette dressée au bout de chaque rangée de tuiles, sur l'égout visible."""
+    h, w = 0.045, 0.022
+    if face == "y":
+        mesh([T(tx - w, ty, z - 0.005), T(tx + w, ty, z - 0.005), T(tx, ty + 0.004, z + h)], [(0, 1, 2)], material)
+    else:
+        mesh([T(tx, ty - w, z - 0.005), T(tx, ty + w, z - 0.005), T(tx + 0.004, ty, z + h)], [(0, 1, 2)], material)
 
 
 def _tile_row(a, b, r, material):
@@ -437,8 +492,12 @@ def steps(tx0, ty0, tx1, ty1, z0, n=3, rise=0.035, inset=0.04, material="marble"
     return z0 + rise * n
 
 
-def ground_pad(n, material="dirt", inset=0.02, h=0.01):
-    tbox(inset, inset, 0, n - inset, n - inset, h, M(material, color=material, noise=0.15, scale=8))
+def ground_pad(n, material="dirt", inset=0.02, h=0.01, seed=0):
+    """Sol de l'emprise, avec touffes d'herbe sur les bords visibles et cailloux."""
+    tbox(inset, inset, 0, n - inset, n - inset, h, M(material, color=material, noise=0.18, scale=6))
+    tufts(0.05, n - 0.2, n - 0.05, n - 0.04, int(5 * n), seed + n)
+    tufts(n - 0.2, 0.05, n - 0.04, n - 0.05, int(5 * n), seed + n + 1)
+    pebbles(0.1, 0.1, n - 0.1, n - 0.1, int(4 * n), seed + n)
 
 
 def paving(tx0, ty0, tx1, ty1, z=0.0, h=0.015, material="stone", scale=18):
@@ -446,14 +505,12 @@ def paving(tx0, ty0, tx1, ty1, z=0.0, h=0.015, material="stone", scale=18):
 
 
 def window(face, a, z0, z1, material="black"):
-    """Petite ouverture sombre sur une face visible : face = ('y', y_val, x_center) ou ('x', x_val, y_center)."""
-    m = M(material, color=material, noise=0.0)
-    if face[0] == "y":
-        y, xc = face[1], face[2]
-        tbox(xc - a, y - 0.005, z0, xc + a, y + 0.012, z1, m)
-    else:
-        x, yc = face[1], face[2]
-        tbox(x - 0.005, yc - a, z0, x + 0.012, yc + a, z1, m)
+    """Ouverture sur une face visible : face = ('y', y_val, x_centre) ou ('x', x_val, y_centre).
+
+    Sombre et étroite : fenêtre à volets ; en bois : porte avec cadre et seuil.
+    """
+    kind = "door" if material == "wood_dark" else "window"
+    opening((face[0], face[1]), face[2], a, z0, z1, kind=kind, shutters=(kind == "window" and a <= 0.06))
 
 
 def amphora(tx, ty, z=0.0, s=1.0, material="terracotta"):
@@ -548,3 +605,194 @@ def fire(tx, ty, z, s=1.0):
 
 def water_surface(tx0, ty0, tx1, ty1, z):
     tbox(tx0, ty0, z - 0.01, tx1, ty1, z, M("eau", color="water", rough=0.15, noise=0.12, scale=30))
+
+
+# --------------------------------------------------------------------------- détails de vie
+
+def opening(face, c, w, z0, z1, kind="window", shutters=True, color="#3c6e9a"):
+    """Fenêtre ou porte sur une face visible, avec cadre, linteau de bois et volets ouverts.
+
+    face = ('y', y) pour la face gauche (y max), ('x', x) pour la face droite (x max) ; c = position le long de la face.
+    """
+    dark = M("black", color="#2a2018", noise=0.0)
+    wood = M("wood_dark", color="wood_dark", noise=0.06)
+    shut = M("volet_" + color, color=color, noise=0.08)
+    trim = M("encadrement", color="#e9e0c8", noise=0.04)
+
+    def rect(a0, a1, zz0, zz1, d0, d1, m):
+        if face[0] == "y":
+            box(a0, -(face[1] + d1), zz0, a1, -(face[1] + d0), zz1, m, bevel=0.002)
+        else:
+            box(face[1] + d0, -a1, zz0, face[1] + d1, -a0, zz1, m, bevel=0.002)
+
+    rect(c - w - 0.012, c + w + 0.012, z0 - (0.012 if kind == "window" else 0), z1 + 0.012, -0.004, 0.006, trim)
+    rect(c - w, c + w, z0, z1, -0.004, 0.009, wood if kind == "door" else dark)
+    rect(c - w - 0.02, c + w + 0.02, z1 + 0.012, z1 + 0.03, -0.004, 0.016, wood)
+    if kind == "door":
+        rect(c - 0.004, c + 0.004, z0, z1, 0.008, 0.012, dark)
+        rect(c - w - 0.02, c + w + 0.02, z0 - 0.02, z0, -0.004, 0.03, M("stone"))
+    elif shutters:
+        for s in (-1, 1):
+            a = c + s * (w + 0.012)
+            rect(min(a, a + s * w), max(a, a + s * w), z0, z1, 0.006, 0.012, shut)
+
+
+def dado(face, a0, a1, z0, z1, color="#a8382c"):
+    """Bande peinte en bas du mur (soubassement coloré des maisons grecques)."""
+    m = M("bande_" + color, color=color, noise=0.06)
+    if face[0] == "y":
+        box(a0, -(face[1] + 0.006), z0, a1, -(face[1] - 0.003), z1, m, bevel=0.001)
+    else:
+        box(face[1] - 0.003, -a1, z0, face[1] + 0.006, -a0, z1, m, bevel=0.001)
+
+
+def rubble_wall(tx0, ty0, tx1, ty1, h=0.12, t=0.06, seed=0):
+    """Muret de pierres sèches : blocs irréguliers aux teintes variées, chaperon arrondi."""
+    rnd = random.Random(seed)
+    shades = [M("moellon%d" % k, color=c, noise=0.12, scale=18) for k, c in enumerate(("#b8ab95", "#a69a84", "#c7bba5", "#9b8f7a"))]
+    length = math.hypot(tx1 - tx0, ty1 - ty0)
+    n = max(1, int(length / 0.07))
+    rows = max(1, int(h / 0.045))
+    for r in range(rows):
+        off = (r % 2) * 0.5
+        for i in range(n):
+            f0 = min(1.0, (i + off) / n)
+            f1 = min(1.0, (i + 1 + off) / n)
+            if f1 <= f0:
+                continue
+            ax, ay = tx0 + (tx1 - tx0) * f0, ty0 + (ty1 - ty0) * f0
+            bx, by = tx0 + (tx1 - tx0) * f1, ty0 + (ty1 - ty0) * f1
+            j = rnd.uniform(-0.006, 0.006)
+            if abs(tx1 - tx0) > abs(ty1 - ty0):
+                tbox(ax + 0.003, ay - t / 2 + j, r * h / rows, bx - 0.003, ay + t / 2 + j, (r + 1) * h / rows - 0.004, rnd.choice(shades), bevel=0.008)
+            else:
+                tbox(ax - t / 2 + j, ay + 0.003, r * h / rows, ax + t / 2 + j, by - 0.003, (r + 1) * h / rows - 0.004, rnd.choice(shades), bevel=0.008)
+
+
+def tufts(tx0, ty0, tx1, ty1, count=10, seed=0, z=0.0, color="#7d8f45"):
+    """Touffes d'herbe et petites fleurs éparses."""
+    rnd = random.Random(seed)
+    leaf = M("touffe" + color, color=color, noise=0.2)
+    flowers = [M("fleur_" + c, color=c, noise=0.0) for c in ("#f1e6c4", "#d9b13b", "#c4566e")]
+    for k in range(count):
+        x, y = rnd.uniform(tx0, tx1), rnd.uniform(ty0, ty1)
+        for j in range(3):
+            bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.012, radius2=0.0, depth=rnd.uniform(0.04, 0.07),
+                                            location=(x + rnd.uniform(-0.015, 0.015), -y + rnd.uniform(-0.015, 0.015), z + 0.025))
+            o = bpy.context.object
+            o.rotation_euler = (rnd.uniform(-0.4, 0.4), rnd.uniform(-0.4, 0.4), 0)
+            _link(o, leaf)
+        if rnd.random() < 0.35:
+            sphere(x, y, z + 0.05, 0.009, rnd.choice(flowers), seg=6, rings=4)
+
+
+def pebbles(tx0, ty0, tx1, ty1, count=8, seed=0, z=0.0):
+    rnd = random.Random(seed)
+    for k in range(count):
+        r = rnd.uniform(0.008, 0.02)
+        blob(rnd.uniform(tx0, tx1), rnd.uniform(ty0, ty1), z + r * 0.3, r, M("caillou", color="#a69b88", noise=0.1), seed=seed + k, sz=r * 0.6)
+
+
+def pithos(tx, ty, z=0.0, s=1.0):
+    """Grande jarre de stockage à demi enterrée, avec liseré peint."""
+    m = M("pithos", color="#b8673f", noise=0.1)
+    sphere(tx, ty, z + 0.07 * s, 0.06 * s, m, sz=0.08 * s, seg=14, rings=8)
+    cyl(tx, ty, z + 0.14 * s, z + 0.16 * s, 0.03 * s, m, verts=12)
+    cyl(tx, ty, z + 0.095 * s, z + 0.11 * s, 0.061 * s, M("liseré", color="#3a2a20"), verts=14)
+
+
+def potted_plant(tx, ty, z=0.0, s=1.0, seed=0, flower=None):
+    cyl(tx, ty, z, z + 0.05 * s, 0.025 * s, M("terracotta"), verts=10, r_top=0.032 * s)
+    blob(tx, ty, z + 0.08 * s, 0.04 * s, M("leaf"), seed=seed, sz=0.035 * s)
+    if flower:
+        for k in range(3):
+            sphere(tx + (k - 1) * 0.015 * s, ty + 0.01 * s, z + 0.11 * s, 0.01 * s, M("fl_" + flower, color=flower), seg=6, rings=4)
+
+
+def chicken(tx, ty, z=0.0, color="#efe4cf"):
+    m = M("poule_" + color, color=color, noise=0.05)
+    sphere(tx, ty, z + 0.03, 0.025, m, sz=0.02, seg=8, rings=5)
+    sphere(tx + 0.02, ty + 0.01, z + 0.055, 0.012, m, seg=6, rings=4)
+    sphere(tx + 0.024, ty + 0.012, z + 0.068, 0.005, M("cloth_red"), seg=5, rings=3)
+
+
+def oven(tx, ty, z=0.0):
+    """Four à pain en coupole d'argile."""
+    m = M("argile", color="#b98a5e", noise=0.1)
+    sphere(tx, ty, z, 0.1, m, sz=0.09, seg=14, rings=7)
+    box(tx + 0.07, -ty - 0.03, z, tx + 0.105, -ty + 0.03, z + 0.05, M("black", color="#2a2018"), bevel=0.003)
+
+
+def well(tx, ty, z=0.0):
+    rubble_ring = M("margelle", color="#c7bba5", noise=0.1)
+    cyl(tx, ty, z, z + 0.1, 0.08, rubble_ring, verts=16)
+    cyl(tx, ty, z + 0.1, z + 0.102, 0.06, M("eau", color="#1f4a6a"), verts=16)
+    for d in (-0.07, 0.07):
+        cyl(tx + d, ty - d, z, z + 0.25, 0.01, M("wood"), verts=6)
+    _beam(Vector(T(tx - 0.07, ty + 0.07, z + 0.24)), Vector(T(tx + 0.07, ty - 0.07, z + 0.24)), 0.008, M("wood"))
+    cyl(tx, ty, z + 0.1, z + 0.14, 0.02, M("seau", color="#7a5230"), verts=8)
+
+
+def laundry(tx0, ty0, tx1, ty1, z=0.25, seed=0):
+    """Corde à linge entre deux piquets, tissus colorés."""
+    rnd = random.Random(seed)
+    for (x, y) in ((tx0, ty0), (tx1, ty1)):
+        cyl(x, y, 0, z + 0.01, 0.007, M("wood"), verts=5)
+    _beam(Vector(T(tx0, ty0, z)), Vector(T(tx1, ty1, z)), 0.002, M("corde", color="#e8dcc0"))
+    cols = ("cloth_white", "cloth_red", "cloth_blue", "ochre", "cloth_white")
+    for k in range(3):
+        f = 0.2 + k * 0.25
+        x, y = tx0 + (tx1 - tx0) * f, ty0 + (ty1 - ty0) * f
+        c = cols[rnd.randrange(len(cols))]
+        if abs(tx1 - tx0) > abs(ty1 - ty0):
+            tbox(x - 0.04, y - 0.002, z - 0.09, x + 0.04, y + 0.002, z, M(c, color=c, noise=0.05), bevel=0.001)
+        else:
+            tbox(x - 0.002, y - 0.04, z - 0.09, x + 0.002, y + 0.04, z, M(c, color=c, noise=0.05), bevel=0.001)
+
+
+def balcony(face, a0, a1, z, depth=0.12):
+    """Balcon de bois sur consoles, garde-corps à barreaux."""
+    wood = M("wood", color="wood", noise=0.08)
+    dark = M("wood_dark")
+    n = max(2, int((a1 - a0) / 0.05))
+    if face[0] == "y":
+        y = face[1]
+        tbox(a0, y, z - 0.015, a1, y + depth, z, wood, bevel=0.003)
+        tbox(a0, y + depth - 0.01, z + 0.09, a1, y + depth, z + 0.1, dark, bevel=0.002)
+        for i in range(n + 1):
+            x = a0 + (a1 - a0) * i / n
+            tbox(x - 0.004, y + depth - 0.008, z, x + 0.004, y + depth - 0.002, z + 0.09, dark, bevel=0.001)
+        for x in (a0 + 0.03, a1 - 0.03):
+            tbox(x - 0.008, y, z - 0.06, x + 0.008, y + depth * 0.7, z - 0.015, dark, bevel=0.002)
+    else:
+        x = face[1]
+        tbox(x, a0, z - 0.015, x + depth, a1, z, wood, bevel=0.003)
+        tbox(x + depth - 0.01, a0, z + 0.09, x + depth, a1, z + 0.1, dark, bevel=0.002)
+        for i in range(n + 1):
+            yy = a0 + (a1 - a0) * i / n
+            tbox(x + depth - 0.008, yy - 0.004, z, x + depth - 0.002, yy + 0.004, z + 0.09, dark, bevel=0.001)
+        for yy in (a0 + 0.03, a1 - 0.03):
+            tbox(x, yy - 0.008, z - 0.06, x + depth * 0.7, yy + 0.008, z - 0.015, dark, bevel=0.002)
+
+
+def pergola(tx0, ty0, tx1, ty1, h=0.3, seed=0):
+    """Treille sur poteaux couverte de vigne, grappes violettes."""
+    rnd = random.Random(seed)
+    for (x, y) in ((tx0, ty0), (tx1, ty0), (tx0, ty1), (tx1, ty1)):
+        cyl(x, y, 0, h, 0.012, M("wood"), verts=6)
+    for k in range(5):
+        y = ty0 + (ty1 - ty0) * k / 4
+        tbox(tx0 - 0.02, y - 0.006, h, tx1 + 0.02, y + 0.006, h + 0.012, M("wood"), bevel=0.002)
+    leaf = M("vigne", color="#6f8a3a", noise=0.25, scale=30)
+    for k in range(int((tx1 - tx0) * (ty1 - ty0) * 120) + 4):
+        blob(rnd.uniform(tx0, tx1), rnd.uniform(ty0, ty1), h + 0.025, rnd.uniform(0.03, 0.05), leaf, seed=seed + k, sz=0.02)
+    for k in range(4):
+        sphere(rnd.uniform(tx0, tx1), rnd.uniform(ty0, ty1), h - 0.01, 0.012, M("raisin", color="#5a2f5e"), seg=6, rings=4)
+
+
+def _beam(a, b, r, material):
+    d = b - a
+    bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=r, depth=d.length, location=(a + b) / 2)
+    o = bpy.context.object
+    o.rotation_euler = d.to_track_quat("Z", "Y").to_euler()
+    return _link(o, material)

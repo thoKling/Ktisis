@@ -7,6 +7,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import kit  # noqa: E402
 from buildings import BUILDINGS, PROPS, WALKERS  # noqa: E402
+import houses  # noqa: E402,F401  (enregistre les maisons)
+import details  # noqa: E402,F401  (seconde passe de détails)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
