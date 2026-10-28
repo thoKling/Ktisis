@@ -1,6 +1,6 @@
 extends "res://tests/run_tests.gd"
 ## Capture d'écran d'une Thèbes construite automatiquement (nécessite un affichage, par ex. xvfb-run) :
-##   xvfb-run godot --path . -s res://tests/screenshot.gd -- sortie.png [mois]
+##   xvfb-run godot --path . -s res://tests/screenshot.gd -- sortie.png [mois] [mission 0-2]
 
 const Iso = preload("res://scripts/view/iso.gd")
 
@@ -8,6 +8,7 @@ var main
 var frame := 0
 var out_path := "user://capture.png"
 var months := 10
+var mission := 0
 
 
 func _initialize() -> void:
@@ -15,19 +16,25 @@ func _initialize() -> void:
 	if args.size() > 0:
 		out_path = args[0]
 	months = int(args[1]) if args.size() > 1 else 10
+	mission = int(args[2]) if args.size() > 2 else 0
 	main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 
 
 func _setup() -> void:
-	main.start_mission(0)
+	main.start_mission(mission)
 	var g = main.game
-	build_thebes(g.city)
-	g.city.run_months(months)
+	[Planner.build_thebes, Planner.build_athenes, Planner.build_iolcos][mission].call(g.city)
+	for m in months:
+		g.city.run_months(1)
+		g.city.festival(g.city.mission["gods"][0])
+		Planner.develop(g.city)
+		if m % 3 == 2:
+			Planner.embellish(g.city)
 	g.hud._close_modal()
 	g.set_speed(1)
-	g.camera.position = Iso.to_screen(Vector2(18, g.city.entry.y))
-	g.camera.zoom = Vector2(1.1, 1.1)
+	g.camera.position = Iso.to_screen(Vector2(18 + mission * 4, g.city.entry.y))
+	g.camera.zoom = Vector2(1.1, 1.1) if mission == 0 else Vector2(0.6, 0.6)
 
 
 func _process(_delta: float) -> bool:

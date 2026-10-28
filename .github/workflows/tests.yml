@@ -27,7 +27,7 @@ jobs:
       - name: Tests de la simulation
         run: |
           set -o pipefail
-          ./godot --headless --path . -s res://tests/run_tests.gd 2>&1 | tee tests.log
+          timeout 600 ./godot --headless --path . -s res://tests/run_tests.gd 2>&1 | tee tests.log
           ! grep -E "SCRIPT ERROR|Parse Error" tests.log
 
       - name: Test de fumée (scène principale, clics simulés)

@@ -203,12 +203,13 @@ func flash(t: String) -> void:
 
 func add_log(e: Dictionary) -> void:
 	var l := Label.new()
-	l.text = "[%s] %s" % [game.city.date_text(), e["text"]]
+	var m: int = e.get("month", 0)
+	l.text = "[An %d, mois %d] %s" % [m / 12 + 1, m % 12 + 1, e["text"]]
 	var colors := {"good": Color("#9fe39f"), "bad": Color("#ff8f80"), "warn": Color("#ffcf6b")}
 	if colors.has(e["kind"]):
 		l.add_theme_color_override("font_color", colors[e["kind"]])
 	_log.add_child(l)
-	while _log.get_child_count() > 5:
+	while _log.get_child_count() > 4:
 		var first := _log.get_child(0)
 		_log.remove_child(first)
 		first.queue_free()

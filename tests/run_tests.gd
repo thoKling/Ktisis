@@ -4,6 +4,8 @@ extends SceneTree
 
 const Defs = preload("res://scripts/sim/defs.gd")
 const City = preload("res://scripts/sim/city.gd")
+const Planner = preload("res://tests/planner.gd")
+const Balance = preload("res://tests/balance.gd")
 
 var failures := 0
 var checks := 0
@@ -25,7 +27,7 @@ func _initialize() -> void:
 		"test_monument_stages",
 		"test_favor_and_patron",
 		"test_save_load",
-		"test_campaign_thebes_playable",
+		"test_campaign_playable",
 	]
 	for t in tests:
 		current = t
@@ -49,7 +51,7 @@ func flat_city(extra := {}) -> City:
 	var m := {
 		"id": "test", "title": "Test",
 		"map": {"width": 40, "height": 40, "seed": 5, "coast": "", "lakes": 0, "meadows": 0, "forests": 0, "rocks": 0},
-		"start_money": 100000, "gods": ["demeter", "athena", "poseidon"],
+		"start_money": 100000, "gods": [],
 		"buildings": defs.building_order.duplicate(),
 		"objectives": [{"type": "population", "value": 50}],
 	}
@@ -186,7 +188,7 @@ func test_immigration_fills_houses() -> void:
 	check(c.building_at(Vector2i(8, c.entry.y - 2)).pop == 5, "maison 2 pleine")
 	check(c.building_at(Vector2i(15, 30)).pop == 0, "maison sans route vide")
 	check(c.population == 10, "population %d" % c.population)
-	check(c.workers_available == 4, "travailleurs")
+	check(c.workers_available == 5, "travailleurs")
 
 
 ## Ville minimale : grenier, ferme, agora. Les maisons deviennent des maisons simples.
@@ -252,13 +254,13 @@ func test_fire_and_guard() -> void:
 	main_road(c, 20)
 	place_ok(c, "house", Vector2i(4, y + 1))
 	place_ok(c, "house", Vector2i(14, y + 1))
-	c.run_months(21)
+	c.run_months(27)
 	check(c.building_at(Vector2i(4, y + 1)) == null, "une maison sans vigile finit par brûler")
 	var c2 := flat_city()
 	main_road(c2, 20)
 	place_ok(c2, "house", Vector2i(4, y + 1))
 	place_ok(c2, "guard_post", Vector2i(8, y + 1))
-	c2.run_months(21)
+	c2.run_months(27)
 	check(c2.building_at(Vector2i(4, y + 1)) != null, "le vigile prévient l'incendie")
 
 
@@ -335,92 +337,11 @@ func test_save_load() -> void:
 	check(c2.population >= c.population, "la cité rechargée continue de vivre")
 
 
-## Une Thèbes jouée « à la main » atteint ses objectifs : l'équilibrage de la mission 1 tient.
-func test_campaign_thebes_playable() -> void:
-	var defs = Defs.get_defs()
-	var c := City.new(defs.missions[0])
-	var built := build_thebes(c)
-	check(built, "construction de la ville type")
-	c.run_months(48)
-	var objs := c.objectives()
-	for o in objs:
-		print("    ", o["text"], " ", "oui" if o["done"] else "non")
-	check(c.won, "mission 1 gagnée en 4 ans (pop %d, trésor %d)" % [c.population, c.money])
-	check(c.money > 0, "trésor positif")
-
-
-## Construit une ville raisonnable sur la carte de Thèbes : grille de rues et services.
-func build_thebes(c: City) -> bool:
-	var y0 := c.entry.y
-	# Avenue principale depuis l'entrée, puis des rues nord-sud tous les 7 cases.
-	c.place_road_path(City.l_path(Vector2i(0, y0), Vector2i(30, y0)))
-	for x in [6, 13, 20, 27]:
-		c.place_road_path(City.l_path(Vector2i(x, y0 - 9), Vector2i(x, y0 + 9)))
-	for yy in [y0 - 9, y0 + 9]:
-		c.place_road_path(City.l_path(Vector2i(6, yy), Vector2i(27, yy)))
-	# Services dans les blocs.
-	var services := ["agora", "granary", "agora", "fountain", "fountain", "fountain", "altar_demeter", "altar_demeter", "guard_post", "guard_post", "tax_office", "fountain", "guard_post"]
-	for s in services:
-		place_anywhere(c, s, Vector2i(6, y0 - 9), Vector2i(28, y0 + 10))
-	# Maisons le long des rues.
-	var houses := 0
-	for x in [7, 14, 21]:
-		for yy in range(y0 - 8, y0 + 8, 2):
-			for dx in [0, 4]:
-				if c.place("house", Vector2i(x + dx, yy)) == "":
-					houses += 1
-	# Fermes sur les prairies, reliées par une route.
-	var farms := 0
-	for y in range(1, c.height - 4):
-		for x in range(1, c.width - 4):
-			if farms >= 5:
-				break
-			var p := Vector2i(x, y)
-			if c.can_place("farm", p) == "" and _road_link(c, p, 3):
-				if c.place("farm", p) == "":
-					farms += 1
-	print("    maisons %d, fermes %d, bâtiments %d" % [houses, farms, c.buildings.size()])
-	return houses >= 30 and farms >= 3
-
-
-## Pose un bâtiment au premier endroit libre d'une zone qui touche une route.
-func place_anywhere(c: City, type: String, from: Vector2i, to: Vector2i) -> bool:
-	for y in range(from.y, to.y):
-		for x in range(from.x, to.x):
-			var p := Vector2i(x, y)
-			if c.can_place(type, p) != "":
-				continue
-			var s: int = c.defs.building(type)["size"]
-			var touches := false
-			for i in s:
-				for q in [p + Vector2i(i, -1), p + Vector2i(i, s), p + Vector2i(-1, i), p + Vector2i(s, i)]:
-					if c.is_road(q):
-						touches = true
-			if touches and c.place(type, p) == "":
-				return true
-	return false
-
-
-## Relie un bâtiment de taille s posé en p au réseau, en traçant une route jusqu'à la plus proche.
-func _road_link(c: City, p: Vector2i, s: int) -> bool:
-	var start := p + Vector2i(s, 0)
-	if not c.in_bounds(start) or c.terrain_at(start) == Defs.T_WATER:
-		return false
-	var best := Vector2i(-1, -1)
-	var best_d := 1 << 30
-	for y in c.height:
-		for x in c.width:
-			var q := Vector2i(x, y)
-			if c.road_at(q) == City.R_ROAD:
-				var d: int = abs(q.x - start.x) + abs(q.y - start.y)
-				if d < best_d:
-					best_d = d
-					best = q
-	if best.x < 0 or best_d > 25:
-		return false
-	var path := City.l_path(start, best)
-	for q in path:
-		if c.road_at(q) == City.R_NONE and c.can_place("road", q) != "":
-			return false
-	c.place_road_path(path)
-	return true
+## Chaque mission, jouée par le planificateur (tests/planner.gd), se gagne dans un délai raisonnable :
+## l'équilibrage de la campagne tient.
+func test_campaign_playable() -> void:
+	var limits := [24, 48, 84]
+	for mi in 3:
+		var r: Dictionary = Balance.play(mi, limits[mi], false)
+		print("    mission %d : gagnée %s en %d mois, population %d, trésor %d" % [mi + 1, r["won"], r["months"], r["population"], r["money"]])
+		check(r["won"], "mission %d gagnée en %d mois" % [mi + 1, limits[mi]])

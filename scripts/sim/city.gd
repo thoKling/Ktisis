@@ -9,12 +9,12 @@ const MapGen = preload("res://scripts/sim/map_gen.gd")
 
 const TICKS_PER_MONTH := 200
 const WALKER_STEP_TICKS := 4
-const SERVICE_TICKS := 800
+const SERVICE_TICKS := 1000
 const SERVICE_RADIUS := 2
 const HOUSE_ROAD_RADIUS := 2
 const CART_LOAD := 10
 const PRODUCER_MAX_STOCK := 30
-const WORKER_RATIO := 0.45
+const WORKER_RATIO := 0.5
 const IMMIGRATION_PERIOD := 12
 const IMMIGRANT_GROUP := 4
 const HOUSE_FOOD_MONTHS := 4
@@ -64,6 +64,7 @@ var map_version := 0
 var rng := RandomNumberGenerator.new()
 var _access_cache := {}
 var _no_entry_warned_month := -100
+var _labor_warned_month := -100
 
 
 func _init(mission_def: Dictionary = {}) -> void:
@@ -692,7 +693,7 @@ func _finish_service(w) -> void:
 	var home = buildings.get(w.home)
 	if home != null and home.walker_id == w.id:
 		home.walker_id = -1
-		home.cooldown = 30
+		home.cooldown = 10
 
 
 func _step_path(w) -> void:
@@ -975,6 +976,9 @@ func _monthly() -> void:
 	months += 1
 	_update_houses()
 	_allocate_workers()
+	if workers_needed > workers_available and months - _labor_warned_month >= 6:
+		_labor_warned_month = months
+		_event("Il manque %d travailleurs : certains bâtiments tournent au ralenti." % (workers_needed - workers_available), "warn")
 	_update_risk()
 	_update_gods()
 	_update_effects()
@@ -1009,7 +1013,10 @@ func _update_gods() -> void:
 			var delta := covered / float(inhabited.size()) * 4.0 - 1.0
 			if sanctuary_complete(god):
 				delta += 2.0
+			var before: float = favor[god]
 			favor[god] = clampf(favor[god] + delta, 0.0, 100.0)
+			if before > 25.0 and favor[god] <= 25.0:
+				_event("%s est mécontent de vous : bâtissez-lui des autels ou offrez-lui une fête." % defs.gods[god]["name"], "warn")
 		var gd: Dictionary = defs.gods[god]
 		if favor[god] >= 80.0 and cd["blessing"] == 0 and rng.randf() < 0.25:
 			cd["blessing"] = 12
