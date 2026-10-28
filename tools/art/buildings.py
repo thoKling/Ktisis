@@ -578,3 +578,366 @@ def w_immigrant():
     sphere(0.36, 0.6, 0.3, 0.05, M("baluchon", color="#c9b48a", noise=0.1))
     person(0.6, 0.42, "#6e7f5a", s=0.95, hair="#5a3a22")
     person(0.58, 0.6, "#a0705a", s=0.6)
+
+
+# --------------------------------------------------------------------------- industrie et stockage
+
+@building("warehouse", 3)
+def warehouse():
+    """Entrepôt : halle de pierre à large porte, cour encombrée de jarres, bois, laine et blocs de marbre."""
+    ground_pad(3, "dirt")
+    tbox(0.12, 0.12, 0, 1.9, 1.7, 0.1, M("stone_soc", color="stone", kind="brick", scale=22))
+    tbox(0.14, 0.14, 0.1, 1.88, 1.68, 0.6, M("stone_mur", color="#cbbd9f", kind="brick", scale=16))
+    window(("y", 1.68, 1.0), 0.22, 0.1, 0.48, material="wood_dark")
+    window(("x", 1.88, 0.9), 0.16, 0.1, 0.42, material="wood_dark")
+    for x in (0.4, 1.6):
+        window(("y", 1.68, x), 0.04, 0.42, 0.52)
+    prism_roof(0.12, 0.12, 1.9, 1.7, 0.6, 0.34, along="y", pediment=M("stone_mur", color="#cbbd9f", kind="brick", scale=16))
+    # Auvent latéral sur poteaux.
+    for y in (0.3, 0.9, 1.5):
+        post(2.55, y, 0, 0.4)
+    tbox(1.9, 0.15, 0.4, 2.62, 1.65, 0.42, M("wood"))
+    awning(1.9, 0.12, 2.65, 1.68, 0.5, 0.4, along="y", colors=("terracotta", "terracotta_dark"), stripes=8)
+    for k in range(6):
+        amphora(2.05 + (k % 3) * 0.13, 0.3 + (k // 3) * 0.13)
+    for k in range(4):
+        cyl(2.3, 1.0 + k * 0.035, 0.03 + 0.0, 0.03, 0.0, None) if False else None
+    # Rondins.
+    import bpy
+    import math
+    for k in range(5):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.035, depth=0.5, location=(2.3 + (k % 3) * 0.075, -1.25, 0.035 + (k // 3) * 0.06))
+        o = bpy.context.object
+        o.rotation_euler = (math.radians(90), 0, 0)
+        o.data.materials.append(M("wood"))
+    for k in range(3):
+        tbox(0.3 + k * 0.25, 2.0, 0, 0.5 + k * 0.25, 2.2, 0.16, M("marble"), bevel=0.008)
+    tbox(0.4, 2.0, 0.16, 0.6, 2.2, 0.3, M("marble"), bevel=0.008)
+    for k in range(4):
+        sphere(1.3 + k * 0.14, 2.1, 0.06, 0.07, M("laine", color="#efe8da", noise=0.1, bump=0.5), sz=0.06)
+    crate(1.9, 2.4, s=0.14)
+    crate(2.05, 2.45, s=0.12)
+    crate(1.96, 2.42, 0.14, s=0.1)
+
+
+@building("olive_grove", 3)
+def olive_grove():
+    """Oliveraie : rangées d'oliviers sur terre claire, murets de pierre sèche, paniers d'olives."""
+    tbox(0.02, 0.02, 0, 2.98, 2.98, 0.01, M("terre_claire", color="#b9a271", noise=0.2, scale=10))
+    stone = M("pierre_seche", color="stone", noise=0.15, bump=0.5)
+    tbox(0.03, 2.9, 0, 2.97, 2.97, 0.08, stone)
+    tbox(2.9, 0.03, 0, 2.97, 2.97, 0.08, stone)
+    k = 0
+    for i in range(4):
+        for j in range(4):
+            if (i, j) == (3, 3):
+                continue
+            olive_tree(0.38 + i * 0.68, 0.38 + j * 0.68, s=1.55, seed=k)
+            k += 1
+    for (x, y) in ((2.45, 2.55), (2.6, 2.45)):
+        cyl(x, y, 0.01, 0.08, 0.06, M("osier", color="#b8925a", noise=0.1), verts=10)
+        sphere(x, y, 0.08, 0.05, M("olives", color="#4a5228", noise=0.1), sz=0.025)
+    tbox(2.3, 2.2, 0.01, 2.8, 2.3, 0.04, M("wood"))
+
+
+@building("press", 2)
+def press():
+    """Pressoir à huile : atelier ouvert, grand levier de bois, cuve de pierre, jarres d'huile."""
+    ground_pad(2, "stone")
+    tbox(0.1, 0.1, 0, 1.2, 1.0, 0.45, M("plaster_warm", color="plaster_warm", noise=0.06))
+    window(("y", 1.0, 0.65), 0.1, 0.0, 0.3, material="wood_dark")
+    window(("x", 1.2, 0.5), 0.04, 0.25, 0.35)
+    prism_roof(0.1, 0.1, 1.2, 1.0, 0.45, 0.22, along="x", pediment=M("plaster_warm"))
+    # Cuve et levier.
+    cyl(1.5, 0.6, 0.0, 0.14, 0.2, M("stone"), verts=18)
+    cyl(1.5, 0.6, 0.14, 0.16, 0.16, M("huile", color="#8a8a2a", rough=0.2), verts=18)
+    post(1.25, 0.6, 0, 0.42, r=0.03)
+    import bpy
+    import math
+    a, b = (1.2, -0.6, 0.38), (1.9, -0.6, 0.24)
+    from mathutils import Vector
+    va, vb = Vector(a), Vector(b)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.025, depth=(vb - va).length, location=(va + vb) / 2)
+    o = bpy.context.object
+    o.rotation_euler = (vb - va).to_track_quat("Z", "Y").to_euler()
+    o.data.materials.append(M("wood"))
+    tbox(1.82, 0.52, 0.0, 1.98, 0.68, 0.22, M("stone"))
+    for k in range(6):
+        amphora(0.3 + (k % 3) * 0.14, 1.3 + (k // 3) * 0.16, s=1.1)
+    sphere(1.0, 1.5, 0.05, 0.06, M("olives", color="#4a5228", noise=0.1), sz=0.04)
+    olive_tree(1.6, 1.6, s=1.1, seed=9)
+
+
+@building("sheepfold", 3)
+def sheepfold():
+    """Bergerie : enclos de pierre sèche, abri à toit de chaume, moutons."""
+    ground_pad(3, "grass")
+    stone = M("pierre_seche", color="stone", noise=0.15, bump=0.5)
+    for (x0, y0, x1, y1) in ((0.1, 0.1, 2.9, 0.18), (0.1, 2.82, 2.0, 2.9), (2.4, 2.82, 2.9, 2.9), (0.1, 0.1, 0.18, 2.9), (2.82, 0.1, 2.9, 2.9)):
+        tbox(x0, y0, 0, x1, y1, 0.12, stone)
+    tbox(0.25, 0.25, 0, 1.4, 0.9, 0.3, M("mudbrick", color="mudbrick", noise=0.08))
+    window(("y", 0.9, 0.8), 0.12, 0.0, 0.22, material="wood_dark")
+    prism_roof(0.25, 0.25, 1.4, 0.9, 0.3, 0.2, along="x", material=M("thatch", color="thatch", noise=0.2, bump=0.4), tiles=False)
+    rnd = random.Random(3)
+    wool = M("laine", color="#efe8da", noise=0.1, bump=0.5)
+    head = M("tete_mouton", color="#3a3028")
+    for k in range(9):
+        x, y = rnd.uniform(0.4, 2.6), rnd.uniform(1.1, 2.6)
+        sphere(x, y, 0.08, 0.075, wool, sz=0.055)
+        sphere(x + 0.06, y + 0.04, 0.1, 0.025, head)
+        for (dx, dy) in ((-0.03, -0.02), (0.03, 0.02)):
+            cyl(x + dx, y + dy, 0, 0.05, 0.008, head, verts=5)
+    tbox(2.0, 0.5, 0, 2.6, 0.6, 0.08, M("wood"))
+    tbox(2.0, 0.5, 0.06, 2.6, 0.6, 0.08, M("eau", color="water"))
+    sphere(1.7, 0.6, 0.08, 0.12, M("thatch", color="thatch", noise=0.2), sz=0.1)
+
+
+@building("woodcutter", 2)
+def woodcutter():
+    """Bûcheron : cabane de bois, billots, troncs empilés et hache."""
+    ground_pad(2, "dirt")
+    tbox(0.15, 0.15, 0, 1.0, 0.9, 0.36, M("planches", color="wood", kind="brick", scale=30))
+    window(("y", 0.9, 0.55), 0.08, 0.0, 0.25, material="wood_dark")
+    prism_roof(0.15, 0.15, 1.0, 0.9, 0.36, 0.22, along="x", material=M("bardeaux", color="#7a5a3a", noise=0.2, bump=0.4), tiles=False)
+    import bpy
+    import math
+    for k in range(6):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.05, depth=0.7, location=(1.25 + (k % 3) * 0.1, -1.0, 0.05 + (k // 3) * 0.085))
+        o = bpy.context.object
+        o.rotation_euler = (math.radians(90), 0, 0)
+        o.data.materials.append(M("wood"))
+    cyl(0.6, 1.4, 0, 0.12, 0.08, M("billot", color="#b08a5a"), verts=12)
+    cyl(0.62, 1.4, 0.12, 0.3, 0.008, M("wood_dark"), verts=5)
+    tbox(0.58, 1.37, 0.26, 0.68, 1.39, 0.31, M("fer", color="#7a7a80", rough=0.4))
+    for k in range(8):
+        tbox(0.3 + (k % 4) * 0.06, 1.65, 0.0 + (k // 4) * 0.05, 0.35 + (k % 4) * 0.06, 1.85, 0.05 + (k // 4) * 0.05, M("wood"))
+    pine(1.7, 0.4, s=1.1, seed=3)
+
+
+@building("quarry", 2)
+def quarry():
+    """Carrière : fosse taillée en gradins dans la roche blanche, blocs équarris, grue de bois."""
+    tbox(0.02, 0.02, 0, 1.98, 1.98, 0.01, M("poussiere", color="#d9d1c0", noise=0.15))
+    rock = M("roche_carriere", color="#e2dccf", noise=0.06, bump=0.3)
+    for k in range(5):
+        blob(0.3 + (k % 3) * 0.35, 0.3 + (k // 3) * 0.5, 0.25, 0.32, M("rocher", color="#a59c8a", noise=0.12, scale=12, bump=0.6), seed=k + 40, sz=0.42, lumps=0.25)
+    tbox(0.05, 0.05, 0, 1.2, 1.2, 0.45, rock)
+    tbox(0.05, 1.2, 0, 1.2, 1.4, 0.28, rock)
+    tbox(1.2, 0.05, 0, 1.4, 1.2, 0.28, rock)
+    tbox(0.05, 1.4, 0, 1.2, 1.55, 0.12, rock)
+    tbox(1.4, 0.05, 0, 1.55, 1.2, 0.12, rock)
+    for k in range(4):
+        tbox(1.5 + (k % 2) * 0.22, 1.4 + (k // 2) * 0.25, 0.01, 1.68 + (k % 2) * 0.22, 1.6 + (k // 2) * 0.25, 0.16, M("marble"), bevel=0.006)
+    tbox(1.55, 1.45, 0.16, 1.73, 1.65, 0.3, M("marble"), bevel=0.006)
+    # Grue (chèvre) en bois.
+    post(1.75, 0.6, 0.0, 0.7, r=0.02)
+    post(1.95, 0.75, 0.0, 0.5, r=0.015)
+    import bpy
+    from mathutils import Vector
+    va, vb = Vector((1.75, -0.6, 0.68)), Vector((1.3, -0.95, 0.5))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.015, depth=(vb - va).length, location=(va + vb) / 2)
+    o = bpy.context.object
+    o.rotation_euler = (vb - va).to_track_quat("Z", "Y").to_euler()
+    o.data.materials.append(M("wood"))
+    cyl(1.3, 0.95, 0.3, 0.5, 0.004, M("corde", color="#c9b48a"), verts=4)
+    tbox(1.24, 0.89, 0.22, 1.36, 1.01, 0.3, M("marble"))
+
+
+@building("fishery", 2)
+def fishery():
+    """Quai de pêche : cabane sur pilotis, ponton, barque, filets et paniers de poissons."""
+    ground_pad(2, "dirt")
+    tbox(0.1, 0.1, 0, 0.95, 0.85, 0.34, M("planches", color="wood", kind="brick", scale=30))
+    window(("y", 0.85, 0.5), 0.08, 0.0, 0.24, material="wood_dark")
+    prism_roof(0.1, 0.1, 0.95, 0.85, 0.34, 0.2, along="x", material=M("thatch", color="thatch", noise=0.2, bump=0.4), tiles=False)
+    # Ponton vers le bord (x max).
+    tbox(1.1, 0.7, 0.06, 1.98, 1.1, 0.09, M("planches", color="wood", kind="brick", scale=30))
+    for (x, y) in ((1.2, 0.7), (1.2, 1.1), (1.9, 0.7), (1.9, 1.1)):
+        post(x, y, 0, 0.12, r=0.02)
+    # Barque.
+    hull = M("coque", color="#3c6e9a", noise=0.05)
+    sphere(1.6, 1.45, 0.06, 0.32, hull, sz=0.07)
+    tbox(1.36, 1.38, 0.08, 1.84, 1.52, 0.1, M("wood"))
+    sphere(1.85, 1.45, 0.1, 0.03, M("oeil", color="cloth_white"))
+    # Filets tendus et paniers.
+    for x in (0.3, 0.9):
+        post(x, 1.3, 0, 0.32, r=0.012)
+    mesh([T(0.3, 1.3, 0.3), T(0.9, 1.3, 0.3), T(0.9, 1.3, 0.08), T(0.3, 1.3, 0.08)], [(0, 1, 2, 3)], M("filet", color="#b5a27a", alpha=0.7))
+    for k in range(3):
+        cyl(0.4 + k * 0.18, 1.65, 0, 0.08, 0.06, M("osier", color="#b8925a", noise=0.1), verts=10)
+        sphere(0.4 + k * 0.18, 1.65, 0.08, 0.05, M("poisson", color="#9fb6c2", rough=0.3), sz=0.02)
+
+
+# --------------------------------------------------------------------------- monuments
+
+GOD_COLORS = {
+    "demeter": ("ochre", "wheat"),
+    "athena": ("aegean", "leaf_olive"),
+    "poseidon": ("aegean", "aegean_light"),
+    "hera": ("cloth_red", "#c9a6ff"),
+}
+
+
+def _temple(stage, god=None):
+    """Sanctuaire 4x4 : temple périptère sur crépis, autel et statue du dieu. stage 0-2 = chantier, 3 = achevé."""
+    frieze, accent = GOD_COLORS.get(god, ("aegean", "leaf"))
+    paving(0.03, 0.03, 3.97, 3.97, material="marble_shade", scale=10)
+    x0, y0, x1, y1 = 0.35, 0.3, 2.75, 3.1
+    z = steps(x0 - 0.15, y0 - 0.15, x1 + 0.15, y1 + 0.15, 0.015, n=3, rise=0.05, inset=0.05)
+    hcol = 0.85
+    if stage == 0:
+        # Fondations et blocs empilés.
+        for k in range(8):
+            tbox(3.0 + (k % 2) * 0.3, 0.4 + (k // 2) * 0.4, 0.015, 3.25 + (k % 2) * 0.3, 0.7 + (k // 2) * 0.4, 0.2, M("marble"), bevel=0.01)
+        _scaffold(x0 + 0.2, y1 - 0.4, 0.4)
+        return
+    n_front, n_side = 6, 9
+    frac = 0.5 if stage == 1 else 1.0
+    h = hcol * frac
+    cella = M("marble_mur", color="marble", kind="brick", scale=20)
+    tbox(x0 + 0.4, y0 + 0.5, z, x1 - 0.4, y1 - 0.5, z + h, cella)
+    for i in range(n_front):
+        t = i / (n_front - 1)
+        for yy in (y0 + 0.1, y1 - 0.1):
+            _col(x0 + 0.1 + (x1 - x0 - 0.2) * t, yy, z, h, frac)
+    for i in range(1, n_side - 1):
+        t = i / (n_side - 1)
+        for xx in (x0 + 0.1, x1 - 0.1):
+            _col(xx, y0 + 0.1 + (y1 - y0 - 0.2) * t, z, h, frac)
+    if stage == 1:
+        _scaffold(x1 - 0.2, y1 - 0.2, 0.7)
+        for k in range(4):
+            tbox(3.1, 1.0 + k * 0.4, 0.015, 3.4, 1.3 + k * 0.4, 0.2, M("marble"), bevel=0.01)
+        return
+    entablature(x0, y0, x1, y1, z + hcol, h=0.2, frieze=frieze)
+    if stage == 2:
+        _scaffold(x1 + 0.05, y1 + 0.05, 1.3)
+        # Charpente du toit à nu.
+        for i in range(8):
+            y = y0 + (y1 - y0) * i / 7
+            tbox(x0, y - 0.02, z + hcol + 0.2, x1, y + 0.02, z + hcol + 0.24, M("wood"))
+        return
+    prism_roof(x0, y0, x1, y1, z + hcol + 0.2, 0.42, along="y", pediment=M("marble_shade", color="marble_shade"), overhang=0.04)
+    # Acrotères dorés.
+    for y in (y0, y1):
+        sphere((x0 + x1) / 2, y, z + hcol + 0.66, 0.05, M("gold", color="gold", rough=0.35))
+    # Autel, statue et arbres sacrés.
+    tbox(3.05, 3.1, 0.015, 3.6, 3.5, 0.25, M("marble"), bevel=0.01)
+    tbox(3.03, 3.08, 0.25, 3.62, 3.52, 0.29, M(frieze, color=frieze))
+    fire(3.32, 3.3, 0.29, s=2.0)
+    statue(3.3, 1.2, 0.015, s=2.4, pose=0 if god in ("athena", "poseidon") else 1)
+    tbox(3.18, 1.08, 0.015, 3.42, 1.32, 0.3, M(frieze, color=frieze))
+    statue(3.3, 1.2, 0.3, s=2.2, pose=0 if god in ("athena", "poseidon") else 1, material="gold")
+    cypress(3.7, 0.3, h=0.9, seed=1)
+    cypress(3.75, 2.3, h=0.8, seed=2)
+    cypress(0.3, 3.7, h=0.8, seed=3)
+    for k in range(4):
+        bush(1.0 + k * 0.45, 3.65, 0.015, 1.0, seed=k, color=accent if accent in PAL else "leaf")
+    if god == "athena":
+        olive_tree(2.3, 3.6, s=1.8, seed=4)
+    elif god == "demeter":
+        for k in range(5):
+            sphere(1.2 + k * 0.2, 3.45, 0.06, 0.06, M("wheat", color="wheat"), sz=0.08)
+    elif god == "poseidon":
+        cyl(2.3, 3.6, 0.015, 0.6, 0.012, M("gold", color="gold", rough=0.35), verts=6)
+        for d in (-0.06, 0, 0.06):
+            cyl(2.3 + d, 3.6 - d, 0.55, 0.7, 0.008, M("gold", color="gold", rough=0.35), verts=5)
+    elif god == "hera":
+        for k in range(2):
+            sphere(2.1 + k * 0.3, 3.6, 0.12, 0.08, M("paon", color="#2f7f8f", noise=0.1), sz=0.06)
+
+
+def _col(tx, ty, z, h, frac):
+    if frac < 1:
+        cyl(tx, ty, z, z + h, 0.075, M("marble", color="marble", noise=0.04), verts=12)
+    else:
+        column(tx, ty, z, h, r=0.075)
+
+
+def _scaffold(tx, ty, h):
+    wood = M("wood")
+    for (dx, dy) in ((0, 0), (0.4, 0), (0, -0.4), (0.4, -0.4)):
+        post(tx + dx - 0.2, ty + dy + 0.2, 0, h, r=0.015)
+    for z in (h * 0.5, h):
+        tbox(tx - 0.22, ty - 0.22, z - 0.02, tx + 0.22, ty + 0.22, z, wood)
+
+
+for _god in GOD_COLORS:
+    BUILDINGS["sanctuary_" + _god] = ((lambda g: lambda: _temple(3, g))(_god), 4)
+for _s in range(3):
+    BUILDINGS["monument_s%d" % _s] = ((lambda s: lambda: _temple(s))(_s), 4)
+
+
+def _argo(stage):
+    """Chantier de l'Argo : cale sèche vers l'eau (x max), coque sur ber, voile, provisions."""
+    ground_pad(4, "dirt")
+    tbox(0.4, 1.2, 0.0, 3.98, 2.8, 0.04, M("cale", color="#b08a5e", kind="brick", scale=24))
+    hull = M("coque_argo", color="#7a4a2a", noise=0.08)
+    import bpy
+    import math
+    # Ber (supports).
+    for x in (1.0, 1.7, 2.4, 3.1):
+        tbox(x - 0.05, 1.6, 0.04, x + 0.05, 2.4, 0.2, M("wood_dark"))
+    if stage == 0:
+        # Quille et membrures.
+        tbox(0.8, 1.97, 0.2, 3.4, 2.03, 0.26, hull)
+        for k in range(9):
+            x = 1.0 + k * 0.27
+            for side in (-1, 1):
+                mesh([T(x, 2.0, 0.24), T(x + 0.03, 2.0, 0.24), T(x + 0.03, 2.0 + side * 0.32, 0.55), T(x, 2.0 + side * 0.32, 0.55)],
+                     [(0, 1, 2, 3)], hull)
+    else:
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=10, radius=1.0, location=(2.1, -2.0, 0.42))
+        o = bpy.context.object
+        o.scale = (1.35, 0.34, 0.24)
+        bpy.ops.object.transform_apply(scale=True)
+        bpy.ops.object.shade_smooth()
+        o.data.materials.append(hull)
+        tbox(0.85, 1.75, 0.5, 3.35, 2.25, 0.53, M("wood"))
+        # Rames et bouclier peints, yeux de proue.
+        for k in range(10):
+            x = 1.2 + k * 0.2
+            tbox(x - 0.01, 2.3, 0.35, x + 0.01, 2.65, 0.37, M("wood"))
+            sphere(x, 2.3, 0.5, 0.04, M(["cloth_red", "gold"][k % 2], color=["cloth_red", "gold"][k % 2]), sz=0.04)
+        cyl(3.5, 2.0, 0.3, 0.85, 0.03, hull, verts=8)
+        sphere(3.45, 2.2, 0.55, 0.03, M("oeil", color="cloth_white"))
+        if stage >= 2 or stage == 3:
+            post(2.1, 2.0, 0.5, 1.9, r=0.03)
+            tbox(1.5, 1.98, 1.75, 2.7, 2.02, 1.8, M("wood"))
+            mesh([T(1.55, 2.02, 1.75), T(2.65, 2.02, 1.75), T(2.6, 2.02, 0.95), T(1.6, 2.02, 0.95)], [(0, 1, 2, 3)],
+                 M("voile", color="#f0e2c0", noise=0.06))
+            tbox(1.58, 2.025, 1.2, 2.62, 2.03, 1.32, M("cloth_red"))
+    # Hangar, bois et laine.
+    tbox(0.15, 0.15, 0, 1.3, 0.9, 0.42, M("planches", color="wood", kind="brick", scale=30))
+    prism_roof(0.15, 0.15, 1.3, 0.9, 0.42, 0.22, along="x", pediment=M("wood"))
+    for k in range(6):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.04, depth=0.8, location=(1.8 + (k % 3) * 0.085, -0.5, 0.04 + (k // 3) * 0.07))
+        o = bpy.context.object
+        o.rotation_euler = (0, math.radians(90), math.radians(90))
+        o.data.materials.append(M("wood"))
+    for k in range(3):
+        sphere(2.9 + k * 0.15, 0.5, 0.06, 0.07, M("laine", color="#efe8da", noise=0.1, bump=0.5), sz=0.06)
+    if stage >= 3:
+        for k in range(8):
+            amphora(0.5 + (k % 4) * 0.15, 3.3 + (k // 4) * 0.15)
+        for k in range(4):
+            sphere(1.4 + k * 0.16, 3.4, 0.05, 0.07, M("sac", color="#d8c39a", noise=0.1), sz=0.05)
+    statue(3.6, 3.5, 0.0, s=1.6)
+
+
+for _s in range(3):
+    BUILDINGS["argo_shipyard_s%d" % _s] = ((lambda s: lambda: _argo(s))(_s), 4)
+BUILDINGS["argo_shipyard"] = (lambda: _argo(3), 4)
+
+
+@building("house_empty", 2)
+def house_empty():
+    """Parcelle libre : piquets, cordeau et tas de briques en attendant les colons."""
+    ground_pad(2, "dirt")
+    for (x, y) in ((0.25, 0.25), (1.75, 0.25), (0.25, 1.75), (1.75, 1.75)):
+        post(x, y, 0, 0.16, r=0.012)
+    for (a, b) in (((0.25, 0.25), (1.75, 0.25)), ((1.75, 0.25), (1.75, 1.75)), ((1.75, 1.75), (0.25, 1.75)), ((0.25, 1.75), (0.25, 0.25))):
+        tbox(min(a[0], b[0]) - 0.004, min(a[1], b[1]) - 0.004, 0.13, max(a[0], b[0]) + 0.004, max(a[1], b[1]) + 0.004, 0.137, M("corde", color="#e8dcc0"))
+    for k in range(6):
+        tbox(0.6 + (k % 3) * 0.1, 1.0, (k // 3) * 0.05, 0.69 + (k % 3) * 0.1, 1.2, 0.045 + (k // 3) * 0.05, M("mudbrick"))
+    crate(1.3, 1.3, s=0.1)
