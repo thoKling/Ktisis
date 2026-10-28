@@ -1,6 +1,5 @@
 # Godot
 .godot/
-*.import
 export/
 *.translation
 # Outils

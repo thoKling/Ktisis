@@ -1,0 +1,25 @@
+{
+  "id": "thebes",
+  "title": "Cadmos fonde Thèbes",
+  "intro": [
+    "Cadmos, prince de Tyr, cherche sa sœur Europe enlevée par Zeus. À Delphes, l'oracle lui ordonne d'abandonner sa quête : il devra suivre une vache portant sur le flanc le signe de la lune, et fonder une cité là où elle se couchera.",
+    "La vache s'est couchée dans cette plaine de Béotie. Ici naîtra la Cadmée, la future Thèbes. Déméter, qui fait mûrir le blé, veille sur ces terres.",
+    "Tracez une route depuis l'entrée de la carte, posez des parcelles d'habitation à moins de deux cases de la route, puis nourrissez et abreuvez vos colons pour que leurs maisons grandissent."
+  ],
+  "tips": [
+    "Les colons arrivent par la route à l'ouest : vos maisons doivent y être reliées.",
+    "Une ferme doit être posée sur une prairie fertile (vert clair) et toucher une route.",
+    "La récolte va au grenier, l'agora s'y fournit, puis sa marchande nourrit les maisons qu'elle croise.",
+    "Une fontaine envoie une porteuse d'eau : les maisons nourries et abreuvées deviennent des maisons de famille.",
+    "Le percepteur rapporte l'impôt, le vigile prévient les incendies. Un autel de Déméter garde la déesse de votre côté."
+  ],
+  "outro": "Les murs de la Cadmée s'élèvent. Thèbes est née, et Déméter sourit à ses champs. On racontera longtemps comment un prince errant suivit une vache jusqu'au cœur de la Béotie.",
+  "map": {"width": 48, "height": 48, "seed": 1201, "coast": "", "lakes": 2, "meadows": 7, "forests": 5, "rocks": 2},
+  "start_money": 2500,
+  "gods": ["demeter"],
+  "buildings": ["road", "roadblock", "house", "farm", "granary", "agora", "fountain", "tax_office", "guard_post", "altar_demeter", "garden", "plaza"],
+  "objectives": [
+    {"type": "population", "value": 300},
+    {"type": "houses_level", "level": 2, "count": 10}
+  ]
+}

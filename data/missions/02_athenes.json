@@ -1,0 +1,27 @@
+{
+  "id": "athenes",
+  "title": "Athéna contre Poséidon",
+  "intro": [
+    "Sur le rocher de l'Attique, le roi Cécrops gouverne un peuple qui n'a pas encore de dieu protecteur. Deux immortels se disputent la cité : Poséidon, seigneur des mers, et Athéna, née tout armée du front de Zeus.",
+    "Les dieux ont décidé : celui que les habitants honoreront le plus deviendra le patron de la ville. Poséidon promet une source, Athéna un olivier.",
+    "Bâtissez des autels aux deux dieux, offrez-leur des fêtes, et faites monter la faveur de l'un d'eux jusqu'à 70. Son présent restera à la cité pour toujours."
+  ],
+  "tips": [
+    "Chaque autel envoie un prêtre : la faveur d'un dieu monte avec la part des maisons qu'il couvre.",
+    "Une fête coûte des drachmes mais fait vite monter la faveur d'un dieu.",
+    "Les oliveraies donnent des olives, le pressoir les change en huile : les notables en veulent pour devenir des villas.",
+    "Le marbre de la carrière sert aux statues et aux sanctuaires."
+  ],
+  "outro": "Le peuple a choisi. Le présent du dieu vainqueur restera à jamais sur l'Acropole, et la cité prospère sous sa protection.",
+  "map": {"width": 56, "height": 56, "seed": 2207, "coast": "east", "lakes": 0, "meadows": 8, "forests": 4, "rocks": 5},
+  "start_money": 3000,
+  "gods": ["athena", "poseidon"],
+  "patron_contest": true,
+  "patron_threshold": 70,
+  "buildings": ["road", "roadblock", "house", "farm", "fishery", "granary", "warehouse", "agora", "olive_grove", "press", "quarry", "woodcutter", "fountain", "tax_office", "guard_post", "altar_athena", "altar_poseidon", "garden", "plaza", "statue", "sanctuary_athena", "sanctuary_poseidon"],
+  "objectives": [
+    {"type": "patron"},
+    {"type": "population", "value": 600},
+    {"type": "houses_level", "level": 3, "count": 6}
+  ]
+}
