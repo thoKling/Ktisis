@@ -1,0 +1,8 @@
+# Godot
+.godot/
+*.import
+export/
+*.translation
+# Outils
+godot
+*.zip
