@@ -9,6 +9,7 @@ var frame := 0
 var out_path := "user://capture.png"
 var months := 10
 var mission := 0
+var zoom := 0.0
 
 
 func _initialize() -> void:
@@ -17,6 +18,7 @@ func _initialize() -> void:
 		out_path = args[0]
 	months = int(args[1]) if args.size() > 1 else 10
 	mission = int(args[2]) if args.size() > 2 else 0
+	zoom = float(args[3]) if args.size() > 3 else 0.0
 	main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 
@@ -35,6 +37,8 @@ func _setup() -> void:
 	g.set_speed(1)
 	g.camera.position = Iso.to_screen(Vector2(18 + mission * 4, g.city.entry.y))
 	g.camera.zoom = Vector2(1.1, 1.1) if mission == 0 else Vector2(0.6, 0.6)
+	if zoom > 0.0:
+		g.camera.zoom = Vector2(zoom, zoom)
 
 
 func _process(_delta: float) -> bool:
