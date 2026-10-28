@@ -27,11 +27,11 @@ jobs:
       - name: Tests de la simulation
         run: |
           set -o pipefail
-          timeout 600 ./godot --headless --path . -s res://tests/run_tests.gd 2>&1 | tee tests.log
+          timeout 600 ./godot --headless --path . -s res://tests/run.gd 2>&1 | tee tests.log
           ! grep -E "SCRIPT ERROR|Parse Error" tests.log
 
       - name: Test de fumée (scène principale, clics simulés)
         run: |
           set -o pipefail
-          timeout 120 ./godot --headless --path . -s res://tests/smoke.gd 2>&1 | tee smoke.log
+          timeout 120 ./godot --headless --path . -s res://tests/presentation/smoke.gd 2>&1 | tee smoke.log
           ! grep -E "SCRIPT ERROR|Parse Error" smoke.log

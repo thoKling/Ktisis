@@ -31,10 +31,12 @@ godot --path .
 ## Tests
 
 ```
-godot --headless --path . -s res://tests/run_tests.gd   # simulation, dont les 3 missions jouées automatiquement
-godot --headless --path . -s res://tests/balance.gd -- 2 120   # suivi détaillé d'une mission (0 à 2)
-godot --headless --path . -s res://tests/smoke.gd       # scène principale et clics simulés
-xvfb-run godot --path . -s res://tests/screenshot.gd -- capture.png 12   # capture d'écran
+godot --headless --path . -s res://tests/run.gd                 # tests du domaine puis du contenu
+godot --headless --path . -s res://tests/run.gd -- domain       # seulement le domaine (quelques secondes)
+godot --headless --path . -s res://tests/run.gd -- domain grid  # seulement les suites dont le nom contient « grid »
+godot --headless --path . -s res://tests/presentation/smoke.gd  # scène principale et clics simulés
+godot --headless --path . -s res://tests/tools/balance.gd -- 2 120   # suivi détaillé d'une mission (0 à 2)
+xvfb-run godot --path . -s res://tests/tools/screenshot.gd -- capture.png 12   # capture d'écran
 ```
 
 Les tests tournent aussi dans GitHub Actions. Dans les sessions cloud de Claude Code, Godot est installé par `.claude/hooks/session-start.sh`.
@@ -42,6 +44,14 @@ Les tests tournent aussi dans GitHub Actions. Dans les sessions cloud de Claude 
 ## Organisation
 
 - `data/` : bâtiments, ressources, dieux et missions en JSON. On équilibre ici, sans toucher au code.
-- `scripts/sim/` : simulation, sans affichage (`city.gd` fait avancer la cité par pas fixes).
-- `scripts/view/` : rendu isométrique et interface.
+- `src/domain/` : le jeu lui-même, en GDScript pur, sans nœud, sans fichier, sans affichage.
+  - `city.gd` : la cité (état du monde) ; elle avance par pas fixes et expose commandes et requêtes.
+  - `rules.gd` : constantes de règles (durées, rayons, seuils).
+  - `catalog.gd` : définitions du jeu, construites à partir de dictionnaires.
+  - `world/` : grille (terrain, routes, chemins), bâtiments, marcheurs, générateur de cartes.
+  - `systems/` : une règle par fichier (construction, habitat, logistique, services, beauté, travail, incendies, religion, monuments, objectifs), fonctions sans état qui agissent sur la cité.
+  - `save_codec.gd` : cité vers dictionnaire et retour.
+- `src/infrastructure/` : ce qui touche aux fichiers (lecture de `data/`, sauvegarde et progression dans `user://`).
+- `src/presentation/` : nœuds Godot, rendu isométrique, interface et textes affichés. Seule couche à connaître les deux autres.
+- `tests/` : `domain/` (tests unitaires, avec des données écrites à la main dans `lib/fixtures.gd`), `content/` (les vraies données et l'équilibrage de la campagne), `presentation/` (smoke test), `tools/` (planificateur, suivi d'équilibrage, captures).
 - `assets/` : sprites optionnels, voir `assets/README.md`.

@@ -1,6 +1,6 @@
 # Assets
 
-Les sprites sont générés par les scripts de `tools/art` (voir son README) : chaque bâtiment est une petite maquette 3D Blender rendue en vue isométrique. `scripts/view/art.gd` charge automatiquement tout PNG présent au bon chemin ; sinon le jeu dessine une forme simple.
+Les sprites sont générés par les scripts de `tools/art` (voir son README) : chaque bâtiment est une petite maquette 3D Blender rendue en vue isométrique. `src/presentation/view/art.gd` charge automatiquement tout PNG présent au bon chemin ; sinon le jeu dessine une forme simple.
 
 ## Conventions
 
