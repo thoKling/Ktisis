@@ -26,21 +26,47 @@ static func evaluate(c) -> Array:
 			"monument":
 				done = Monuments.is_complete(c, o["building"])
 				text = "Achever : %s" % c.catalog.building(o["building"])["name"]
+			"patron_monument":
+				# Le temple du protecteur choisi : ce bâtiment de la mission réservé au patron.
+				var type := _patron_monument(c)
+				done = type != "" and Monuments.is_complete(c, type)
+				if type == "":
+					text = "Achever le temple du dieu protecteur"
+				else:
+					text = "Achever : %s" % c.catalog.building(type)["name"]
+			"rival_favor":
+				var r: String = c.rival()
+				var f: float = c.favor.get(r, 0.0)
+				done = r != "" and f >= float(o["value"])
+				if r == "":
+					text = "Apaiser le dieu éconduit (faveur %d)" % int(o["value"])
+				else:
+					text = "Apaiser %s : faveur %d / %d" % [c.catalog.god_name(r), int(f), int(o["value"])]
 			"patron":
 				done = c.patron != ""
 				if done:
 					text = "Patron de la cité : %s" % c.catalog.god_name(c.patron)
 				else:
-					text = "Choisir un patron (faveur %d)" % int(c.mission.get("patron_threshold", 70))
+					text = "Choisir le dieu protecteur de la cité"
 			"favor":
 				var f: float = c.favor.get(o["god"], 0.0)
 				done = f >= float(o["value"])
-				text = "Faveur de %s : %d / %d" % [c.catalog.god_name(o["god"]), int(f), int(o["value"])]
+				text = "Faveur %s : %d / %d" % [c.catalog.god_of(o["god"]), int(f), int(o["value"])]
 			"money":
 				done = c.money >= int(o["value"])
 				text = "Trésor : %d / %d" % [c.money, int(o["value"])]
 		res.append({"text": text, "done": done})
 	return res
+
+
+static func _patron_monument(c) -> String:
+	if c.patron == "":
+		return ""
+	for id in c.mission.get("buildings", []):
+		var d: Dictionary = c.catalog.building(id)
+		if d.get("kind", "") == "monument" and d.get("patron", "") == c.patron:
+			return id
+	return ""
 
 
 static func check(c) -> void:

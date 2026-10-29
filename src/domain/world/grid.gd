@@ -6,7 +6,10 @@ const T_WATER := 1
 const T_FOREST := 2
 const T_ROCK := 3
 const T_MEADOW := 4
-const TERRAIN_NAMES := {"grass": T_GRASS, "water": T_WATER, "forest": T_FOREST, "rock": T_ROCK, "meadow": T_MEADOW}
+## Colline sacrée (l'Acropole) : seuls les routes et les monuments faits pour elle s'y posent.
+const T_HILL := 5
+const TERRAIN_NAMES := {"grass": T_GRASS, "water": T_WATER, "forest": T_FOREST, "rock": T_ROCK, "meadow": T_MEADOW,
+	"hill": T_HILL}
 
 const R_NONE := 0
 const R_ROAD := 1

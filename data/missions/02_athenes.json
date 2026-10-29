@@ -3,25 +3,343 @@
   "title": "Athéna contre Poséidon",
   "intro": [
     "Sur le rocher de l'Attique, le roi Cécrops gouverne un peuple qui n'a pas encore de dieu protecteur. Deux immortels se disputent la cité : Poséidon, seigneur des mers, et Athéna, née tout armée du front de Zeus.",
-    "Les dieux ont décidé : celui que les habitants honoreront le plus deviendra le patron de la ville. Poséidon promet une source, Athéna un olivier.",
-    "Bâtissez des autels aux deux dieux, offrez-leur des fêtes, et faites monter la faveur de l'un d'eux jusqu'à 70. Son présent restera à la cité pour toujours."
+    "Chacun a fait son présent sur la colline. Poséidon a frappé le rocher de son trident et une source a jailli ; Athéna a planté le premier olivier. C'est à vous, au nom du peuple, de choisir.",
+    "Le dieu choisi protégera la cité pour toujours, et sur la colline sacrée vous lui bâtirez l'Acropole : les Propylées, puis son temple. Mais le dieu éconduit ne pardonnera pas facilement : honorez-le aussi, ou craignez sa colère."
   ],
   "tips": [
-    "Chaque autel envoie un prêtre : la faveur d'un dieu monte avec la part des maisons qu'il couvre.",
-    "Une fête coûte des drachmes mais fait vite monter la faveur d'un dieu.",
-    "Les oliveraies donnent des olives, le pressoir les change en huile : les notables en veulent pour devenir des villas.",
-    "Le marbre de la carrière sert aux statues et aux sanctuaires."
+    "La colline sacrée, au centre, ne reçoit que les routes et les monuments de l'Acropole. On y monte par l'ouest.",
+    "Le dieu éconduit perd de la faveur chaque mois : couvrez les maisons de ses prêtres et offrez-lui des fêtes.",
+    "Le marbre vient des carrières du Pentélique, au nord-est ; le bois, des forêts du Parnès et de l'Hymette.",
+    "Les oliveraies veulent la plaine fertile du Céphise, à l'ouest ; les quais de pêche, la baie du Pirée et de Phalère."
   ],
-  "outro": "Le peuple a choisi. Le présent du dieu vainqueur restera à jamais sur l'Acropole, et la cité prospère sous sa protection.",
-  "map": {"width": 56, "height": 56, "seed": 2207, "coast": "east", "lakes": 0, "meadows": 8, "forests": 4, "rocks": 5},
+  "outro": "Sur la colline sacrée, le temple brille au soleil de l'Attique. Le dieu protecteur veille sur sa ville, et l'autre, apaisé, ne gronde plus qu'au loin. On parlera d'Athènes jusqu'au bout du monde.",
+  "map": {
+    "width": 60,
+    "height": 60,
+    "seed": 2207,
+    "entry": [
+      0,
+      24
+    ],
+    "lakes": 0,
+    "meadows": 0,
+    "forests": 0,
+    "rocks": 0,
+    "features": [
+      {
+        "terrain": "forest",
+        "shape": "band",
+        "side": "north",
+        "depth": 2,
+        "rough": 2
+      },
+      {
+        "terrain": "forest",
+        "shape": "band",
+        "side": "east",
+        "depth": 3,
+        "rough": 3
+      },
+      {
+        "terrain": "meadow",
+        "shape": "ellipse",
+        "at": [
+          11,
+          11
+        ],
+        "r": [
+          8,
+          8
+        ],
+        "rough": 0.25
+      },
+      {
+        "terrain": "meadow",
+        "shape": "ellipse",
+        "at": [
+          10,
+          39
+        ],
+        "r": [
+          6,
+          5
+        ],
+        "rough": 0.25
+      },
+      {
+        "terrain": "meadow",
+        "shape": "ellipse",
+        "at": [
+          47,
+          38
+        ],
+        "r": [
+          6,
+          3
+        ],
+        "rough": 0.25
+      },
+      {
+        "terrain": "forest",
+        "shape": "ellipse",
+        "at": [
+          51,
+          9
+        ],
+        "r": [
+          7,
+          6
+        ],
+        "rough": 0.3
+      },
+      {
+        "terrain": "rock",
+        "shape": "ellipse",
+        "at": [
+          51,
+          8
+        ],
+        "r": [
+          4,
+          3
+        ],
+        "rough": 0.3
+      },
+      {
+        "terrain": "forest",
+        "shape": "ellipse",
+        "at": [
+          43,
+          17
+        ],
+        "r": [
+          3,
+          3
+        ],
+        "rough": 0.2
+      },
+      {
+        "terrain": "rock",
+        "shape": "ellipse",
+        "at": [
+          43,
+          17
+        ],
+        "r": [
+          1.6,
+          2.2
+        ]
+      },
+      {
+        "terrain": "rock",
+        "shape": "ellipse",
+        "at": [
+          56,
+          30
+        ],
+        "r": [
+          2,
+          4
+        ],
+        "rough": 0.3
+      },
+      {
+        "terrain": "water",
+        "shape": "band",
+        "side": "south",
+        "depth": 7,
+        "rough": 2
+      },
+      {
+        "terrain": "water",
+        "shape": "ellipse",
+        "at": [
+          38,
+          54
+        ],
+        "r": [
+          10,
+          5
+        ],
+        "rough": 0.2
+      },
+      {
+        "terrain": "grass",
+        "shape": "ellipse",
+        "at": [
+          11,
+          55
+        ],
+        "r": [
+          6,
+          4
+        ],
+        "rough": 0.2
+      },
+      {
+        "terrain": "water",
+        "shape": "ellipse",
+        "at": [
+          18,
+          51
+        ],
+        "r": [
+          3,
+          2
+        ]
+      },
+      {
+        "terrain": "rock",
+        "shape": "ellipse",
+        "at": [
+          32,
+          30
+        ],
+        "r": [
+          9,
+          5.5
+        ],
+        "rough": 0.12
+      },
+      {
+        "terrain": "hill",
+        "shape": "ellipse",
+        "at": [
+          32.5,
+          30
+        ],
+        "r": [
+          7,
+          4
+        ],
+        "rough": 0.08
+      },
+      {
+        "terrain": "hill",
+        "shape": "rect",
+        "from": [
+          22,
+          28
+        ],
+        "to": [
+          26,
+          32
+        ]
+      },
+      {
+        "terrain": "rock",
+        "shape": "ellipse",
+        "at": [
+          20,
+          26
+        ],
+        "r": [
+          1.6,
+          1.2
+        ]
+      }
+    ]
+  },
   "start_money": 3000,
-  "gods": ["athena", "poseidon"],
-  "patron_contest": true,
-  "patron_threshold": 70,
-  "buildings": ["road", "roadblock", "house", "farm", "fishery", "granary", "warehouse", "agora", "olive_grove", "press", "quarry", "woodcutter", "fountain", "tax_office", "guard_post", "altar_athena", "altar_poseidon", "garden", "plaza", "statue", "sanctuary_athena", "sanctuary_poseidon"],
+  "gods": [
+    "athena",
+    "poseidon"
+  ],
+  "buildings": [
+    "road",
+    "roadblock",
+    "house",
+    "farm",
+    "fishery",
+    "granary",
+    "warehouse",
+    "agora",
+    "olive_grove",
+    "press",
+    "quarry",
+    "woodcutter",
+    "fountain",
+    "tax_office",
+    "guard_post",
+    "altar_athena",
+    "altar_poseidon",
+    "garden",
+    "plaza",
+    "statue",
+    "propylaea",
+    "parthenon",
+    "temple_poseidon"
+  ],
   "objectives": [
-    {"type": "patron"},
-    {"type": "population", "value": 600},
-    {"type": "houses_level", "level": 3, "count": 6}
-  ]
+    {
+      "type": "monument",
+      "building": "propylaea"
+    },
+    {
+      "type": "patron_monument"
+    },
+    {
+      "type": "rival_favor",
+      "value": 40
+    },
+    {
+      "type": "population",
+      "value": 600
+    },
+    {
+      "type": "houses_level",
+      "level": 3,
+      "count": 6
+    }
+  ],
+  "patron_choice": {
+    "gift_at": [
+      35,
+      27
+    ],
+    "patron_favor": 60,
+    "rival_favor": 25,
+    "rival_jealousy": 1.0,
+    "options": [
+      {
+        "god": "athena",
+        "gift": "sacred_olive",
+        "pitch": "L'olivier sacré : les oliveraies produisent moitié plus, pour toujours. Vous bâtirez le Parthénon, qui demande beaucoup d'huile. Poséidon éconduit fait trembler la terre quand sa colère éclate.",
+        "effects": [
+          {
+            "type": "production_mult",
+            "resources": [
+              "olives"
+            ],
+            "mult": 1.5,
+            "months": -1,
+            "text": "Athéna fait pousser l'olivier sacré sur la colline : les oliveraies produisent moitié plus, pour toujours."
+          }
+        ]
+      },
+      {
+        "god": "poseidon",
+        "gift": "salt_spring",
+        "pitch": "La source du trident : la pêche rapporte moitié plus et les porteuses d'eau vont moitié plus loin, pour toujours. Vous bâtirez son temple, qui demande bois et poisson. Athéna éconduite envoie la fièvre quand sa colère éclate.",
+        "effects": [
+          {
+            "type": "production_mult",
+            "resources": [
+              "fish"
+            ],
+            "mult": 1.5,
+            "months": -1,
+            "text": "Poséidon peuple la baie de poissons : la pêche rapporte moitié plus, pour toujours."
+          },
+          {
+            "type": "service_range_mult",
+            "service": "water",
+            "mult": 1.5,
+            "months": -1,
+            "text": "La source de Poséidon jaillit sur la colline : les porteuses d'eau vont moitié plus loin, pour toujours."
+          }
+        ]
+      }
+    ]
+  }
 }

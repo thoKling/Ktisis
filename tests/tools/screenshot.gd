@@ -1,6 +1,7 @@
 extends SceneTree
 ## Capture d'écran d'une Thèbes construite automatiquement (nécessite un affichage, par ex. xvfb-run) :
-##   xvfb-run godot --path . -s res://tests/tools/screenshot.gd -- sortie.png [mois] [mission 0-2]
+##   xvfb-run godot --path . -s res://tests/tools/screenshot.gd -- sortie.png [mois] [mission 0-2] [zoom] [dieu] [x y]
+## dieu : le protecteur choisi quand la mission le demande ; x y : la case au centre de l'écran.
 
 const Iso = preload("res://src/presentation/view/iso.gd")
 const Planner = preload("res://tests/tools/planner.gd")
@@ -11,6 +12,8 @@ var out_path := "user://capture.png"
 var months := 10
 var mission := 0
 var zoom := 0.0
+var god := ""
+var center := Vector2(-1, -1)
 
 
 func _initialize() -> void:
@@ -20,6 +23,9 @@ func _initialize() -> void:
 	months = int(args[1]) if args.size() > 1 else 10
 	mission = int(args[2]) if args.size() > 2 else 0
 	zoom = float(args[3]) if args.size() > 3 else 0.0
+	god = args[4] if args.size() > 4 else ""
+	if args.size() > 6:
+		center = Vector2(float(args[5]), float(args[6]))
 	main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 
@@ -27,10 +33,12 @@ func _initialize() -> void:
 func _setup() -> void:
 	main.start_mission(mission)
 	var g = main.game
+	if g.city.needs_patron_choice():
+		g.city.choose_patron(god if god != "" else g.city.patron_options()[0]["god"])
 	[Planner.build_thebes, Planner.build_athenes, Planner.build_iolcos][mission].call(g.city)
 	for m in months:
 		g.city.run_months(1)
-		g.city.festival(g.city.mission["gods"][0])
+		g.city.festival(g.city.patron if g.city.patron != "" else g.city.mission["gods"][0])
 		Planner.develop(g.city)
 		if m % 3 == 2:
 			Planner.embellish(g.city)
@@ -40,6 +48,8 @@ func _setup() -> void:
 	g.camera.zoom = Vector2(1.1, 1.1) if mission == 0 else Vector2(0.6, 0.6)
 	if zoom > 0.0:
 		g.camera.zoom = Vector2(zoom, zoom)
+	if center.x >= 0.0:
+		g.camera.position = Iso.to_screen(center)
 
 
 func _process(_delta: float) -> bool:

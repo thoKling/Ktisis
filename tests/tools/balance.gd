@@ -1,6 +1,6 @@
 extends SceneTree
 ## Joue une mission avec le planificateur et affiche son évolution :
-##   godot --headless --path . -s res://tests/tools/balance.gd -- <mission 0-2> [mois max]
+##   godot --headless --path . -s res://tests/tools/balance.gd -- <mission 0-2> [mois max] [dieu protecteur]
 
 const City = preload("res://src/domain/city.gd")
 const CatalogLoader = preload("res://src/infrastructure/catalog_loader.gd")
@@ -12,24 +12,35 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var mi := int(args[0]) if args.size() > 0 else 0
 	var max_months := int(args[1]) if args.size() > 1 else 120
-	var res := play(mi, max_months, true)
+	var god: String = args[2] if args.size() > 2 else ""
+	var res := play(mi, max_months, true, true, god)
 	print("Résultat : ", res)
 	quit()
 
 
-static func play(mi: int, max_months: int, verbose: bool, embellish: bool = true) -> Dictionary:
+## god : le protecteur choisi quand la mission le demande (le premier proposé si vide).
+static func play(mi: int, max_months: int, verbose: bool, embellish: bool = true, god: String = "") -> Dictionary:
 	var catalog = CatalogLoader.load_catalog()
 	var c := City.new(catalog, catalog.missions[mi])
+	if c.needs_patron_choice():
+		c.choose_patron(god if god != "" else c.patron_options()[0]["god"])
 	var builders := [Planner.build_thebes, Planner.build_athenes, Planner.build_iolcos]
 	var ok: bool = builders[mi].call(c)
 	if verbose:
 		print("construit : %s, %d bâtiments, trésor %d" % [ok, c.buildings.size(), c.money])
-	var favorite: String = c.mission["gods"][0]
+	var favorite: String = c.patron if c.patron != "" else c.mission["gods"][0]
 	for m in max_months:
 		c.run_months(1)
-		c.festival(favorite)
+		# Le dieu éconduit d'abord : il faut l'apaiser.
+		if c.rival() != "":
+			if c.favor[c.rival()] < 50.0:
+				c.festival(c.rival())
+			if c.favor[favorite] < 70.0:
+				c.festival(favorite)
+		else:
+			c.festival(favorite)
 		Planner.develop(c)
-		if embellish and m % 3 == 2 and Planner.wishlist(c.mission["id"]).is_empty() or m > 36:
+		if embellish and m % 3 == 2 and Planner.wishlist(c).is_empty() or m > 36:
 			Planner.embellish(c)
 		if verbose and (c.months % 6 == 0 or c.won):
 			var lv := [0, 0, 0, 0, 0]
@@ -52,9 +63,9 @@ static func play(mi: int, max_months: int, verbose: bool, embellish: bool = true
 			break
 	if verbose:
 		for b in c.buildings.values():
-			if b.kind() in ["monument", "storage"]:
+			if b.kind() in ["monument", "storage", "producer"]:
 				print("  ", BuildingInfo.lines(c, b))
 		for e in c.events:
 			if e["kind"] != "info":
 				print("  ", e["month"], " ", e["text"])
-	return {"won": c.won, "months": c.months, "population": c.population, "money": c.money}
+	return {"won": c.won, "months": c.months, "population": c.population, "money": c.money, "patron": c.patron}

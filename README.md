@@ -36,6 +36,7 @@ godot --headless --path . -s res://tests/run.gd -- domain       # seulement le d
 godot --headless --path . -s res://tests/run.gd -- domain grid  # seulement les suites dont le nom contient « grid »
 godot --headless --path . -s res://tests/presentation/smoke.gd  # scène principale et clics simulés
 godot --headless --path . -s res://tests/tools/balance.gd -- 2 120   # suivi détaillé d'une mission (0 à 2)
+godot --headless --path . -s res://tests/tools/balance.gd -- 1 60 poseidon   # Athènes, avec Poséidon pour protecteur
 xvfb-run godot --path . -s res://tests/tools/screenshot.gd -- capture.png 12   # capture d'écran
 ```
 

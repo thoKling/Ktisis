@@ -13,10 +13,11 @@ const Iso = preload("res://src/presentation/view/iso.gd")
 const TerrainLayer = preload("res://src/presentation/view/terrain_layer.gd")
 const ObjectLayer = preload("res://src/presentation/view/object_layer.gd")
 const Hud = preload("res://src/presentation/view/hud.gd")
+const Relief = preload("res://src/presentation/view/relief.gd")
 
 const TICKS_PER_SECOND := 10.0
 const PAN_SPEED := 900.0
-const TERRAIN_LABELS := ["Herbe", "Eau", "Forêt", "Rocher", "Prairie fertile"]
+const TERRAIN_LABELS := ["Herbe", "Eau", "Forêt", "Rocher", "Prairie fertile", "Colline sacrée"]
 
 var city
 var mission_index := 0
@@ -33,6 +34,7 @@ var _events_read := 0
 var _won_shown := false
 var _pan_drag := false
 
+var relief
 var terrain_layer
 var object_layer
 var camera: Camera2D
@@ -49,8 +51,10 @@ func setup(index: int, loaded_city = null) -> void:
 
 
 func _ready() -> void:
+	relief = Relief.new(city.grid)
 	terrain_layer = TerrainLayer.new()
 	terrain_layer.city = city
+	terrain_layer.relief = relief
 	add_child(terrain_layer)
 	object_layer = ObjectLayer.new()
 	object_layer.game = self
@@ -61,7 +65,7 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.game = self
 	add_child(hud)
-	if city.tick == 0:
+	if city.tick == 0 or city.needs_patron_choice():
 		speed = 0
 		hud.show_intro(city.mission)
 	_won_shown = city.won
@@ -177,7 +181,7 @@ func _rect(a: Vector2i, b: Vector2i, step: int) -> Array:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouse:
-		hover = Iso.tile_at(get_canvas_transform().affine_inverse() * event.position)
+		hover = relief.tile_at(get_canvas_transform().affine_inverse() * event.position)
 	if event is InputEventMouseMotion:
 		if _pan_drag:
 			camera.position -= event.relative / camera.zoom.x
@@ -291,6 +295,14 @@ func selected_building():
 
 func save_game() -> void:
 	hud.flash("Partie sauvegardée" if FileStore.save_city(city) else "Impossible d'écrire la sauvegarde")
+
+
+func choose_patron(god: String) -> void:
+	var err: String = city.choose_patron(god)
+	if err != "":
+		hud.flash(err)
+	# Le temple du protecteur vient d'apparaître : la liste ouverte doit être refaite.
+	hud.clear_build_menu()
 
 
 func festival(god: String) -> void:

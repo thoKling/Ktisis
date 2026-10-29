@@ -18,6 +18,7 @@ const TERRAIN_COLORS := {
 	Grid.T_FOREST: Color("#5f7a3c"),
 	Grid.T_ROCK: Color("#a59d90"),
 	Grid.T_MEADOW: Color("#bcc76a"),
+	Grid.T_HILL: Color("#d6c7a2"),
 }
 const ROAD_COLOR := Color("#d8c39a")
 const ROAD_EDGE := Color("#b09468")
@@ -50,7 +51,8 @@ const SHORT_LABELS := {
 	"tax_office": "Impôt", "guard_post": "Vigie", "altar_demeter": "Déméter", "altar_athena": "Athéna",
 	"altar_poseidon": "Poséidon", "altar_hera": "Héra", "sanctuary_demeter": "Déméter",
 	"sanctuary_athena": "Athéna", "sanctuary_poseidon": "Poséidon", "sanctuary_hera": "Héra",
-	"argo_shipyard": "Argo",
+	"argo_shipyard": "Argo", "propylaea": "Propylées", "parthenon": "Parthénon", "temple_poseidon": "Poséidon",
+	"sacred_olive": "Olivier", "salt_spring": "Source",
 }
 
 ## Les sprites sont rendus en 2x (voir tools/art) : on les dessine à moitié taille pour rester nets au zoom.

@@ -163,10 +163,35 @@ func festival(god: String) -> String:
 	return Religion.festival(self, god)
 
 
+## Mission à choix (Athènes) : désigne le dieu protecteur de la cité.
+func choose_patron(god: String) -> String:
+	var err := Religion.choose_patron(self, god)
+	if err == "":
+		map_version += 1
+	return err
+
+
 # ---------------------------------------------------------------- Requêtes
 
 func is_available(type: String) -> bool:
-	return type in mission.get("buildings", [])
+	if not type in mission.get("buildings", []):
+		return false
+	# Le temple d'un prétendant ne se bâtit que s'il a été choisi pour protecteur.
+	var only_for: String = catalog.building(type).get("patron", "")
+	return only_for == "" or only_for == patron
+
+
+## Vrai tant que le joueur doit encore choisir le protecteur de la cité.
+func needs_patron_choice() -> bool:
+	return patron == "" and not Religion.patron_options(self).is_empty()
+
+
+func patron_options() -> Array:
+	return Religion.patron_options(self)
+
+
+func rival() -> String:
+	return Religion.rival(self)
 
 
 func building_at(p: Vector2i):

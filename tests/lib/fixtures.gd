@@ -53,21 +53,45 @@ const BUILDINGS := [
 	{"id": "sanctuary_demeter", "name": "Sanctuaire", "kind": "monument", "god": "demeter", "size": 4, "cost": 250,
 		"workers": 12, "stages": [{"marble": 20, "wood": 10}, {"marble": 30}, {"marble": 30, "oil": 10}],
 		"stage_ticks": 300, "service": "sanctuary", "range": 40},
+	# L'Acropole : monuments de la colline sacrée, dont un temple par prétendant.
+	{"id": "gate", "name": "Porte", "kind": "monument", "size": 2, "cost": 100, "workers": 4, "on": "hill",
+		"stages": [{"marble": 10}], "stage_ticks": 100},
+	{"id": "temple_athena", "name": "Temple d'Athéna", "kind": "monument", "god": "athena", "patron": "athena",
+		"size": 3, "cost": 100, "workers": 4, "on": "hill", "stages": [{"marble": 10}], "stage_ticks": 100,
+		"service": "sanctuary", "range": 40},
+	{"id": "temple_poseidon", "name": "Temple de Poséidon", "kind": "monument", "god": "poseidon", "patron": "poseidon",
+		"size": 3, "cost": 100, "workers": 4, "on": "hill", "stages": [{"marble": 10}], "stage_ticks": 100,
+		"service": "sanctuary", "range": 40},
+	{"id": "olive_gift", "name": "Olivier sacré", "kind": "deco", "size": 2, "on": "hill", "sacred": true, "beauty": 10,
+		"beauty_radius": 3},
+	{"id": "spring_gift", "name": "Source", "kind": "deco", "size": 2, "on": "hill", "sacred": true, "beauty": 10,
+		"beauty_radius": 3},
 ]
 
+## Choix du protecteur façon Athènes : la colline va de (20, 5) à (29, 12), les présents apparaissent en (26, 6).
+const HILL_FROM := Vector2i(20, 5)
+const HILL_TO := Vector2i(29, 12)
+const PATRON_CHOICE := {
+	"gift_at": [26, 6], "patron_favor": 60, "rival_favor": 25, "rival_jealousy": 1.0,
+	"options": [
+		{"god": "athena", "gift": "olive_gift", "pitch": "Olivier", "effects": [
+			{"type": "production_mult", "resources": ["olives"], "mult": 1.5, "months": -1, "text": "Olivier sacré"}]},
+		{"god": "poseidon", "gift": "spring_gift", "pitch": "Source", "effects": [
+			{"type": "production_mult", "resources": ["fish"], "mult": 1.5, "months": -1, "text": "Poissons"},
+			{"type": "service_range_mult", "service": "water", "mult": 1.5, "months": -1, "text": "Source"}]},
+	],
+}
+
 const GODS := [
-	{"id": "demeter", "name": "Déméter",
+	{"id": "demeter", "female": true, "name": "Déméter",
 		"blessing": {"type": "production_mult", "resources": ["wheat"], "mult": 2.0, "months": 6, "text": "Bénédiction"},
-		"wrath": {"type": "production_mult", "resources": ["wheat"], "mult": 0.0, "months": 3, "text": "Colère"},
-		"patron_bonus": {"type": "production_mult", "resources": ["wheat"], "mult": 1.25, "months": -1, "text": "Patronne"}},
-	{"id": "athena", "name": "Athéna",
+		"wrath": {"type": "production_mult", "resources": ["wheat"], "mult": 0.0, "months": 3, "text": "Colère"}},
+	{"id": "athena", "female": true, "name": "Athéna",
 		"blessing": {"type": "production_mult", "resources": ["olives"], "mult": 2.0, "months": 6, "text": "Bénédiction"},
-		"wrath": {"type": "lose_population", "fraction": 0.2, "text": "Colère"},
-		"patron_bonus": {"type": "production_mult", "resources": ["olives"], "mult": 1.5, "months": -1, "text": "Patronne"}},
+		"wrath": {"type": "lose_population", "fraction": 0.2, "text": "Colère"}},
 	{"id": "poseidon", "name": "Poséidon",
 		"blessing": {"type": "production_mult", "resources": ["fish"], "mult": 2.0, "months": 6, "text": "Bénédiction"},
-		"wrath": {"type": "destroy_random", "count": 2, "text": "Colère"},
-		"patron_bonus": {"type": "service_range_mult", "service": "water", "mult": 1.5, "months": -1, "text": "Patron"}},
+		"wrath": {"type": "destroy_random", "count": 2, "text": "Colère"}},
 ]
 
 
@@ -93,6 +117,15 @@ static func mission(extra: Dictionary = {}) -> Dictionary:
 
 static func flat_city(extra: Dictionary = {}) -> City:
 	return City.new(catalog(), mission(extra))
+
+
+## Cité où Athéna et Poséidon se disputent le patronage, avec sa colline sacrée.
+static func contested_city(extra: Dictionary = {}) -> City:
+	var m := {"gods": ["athena", "poseidon"], "patron_choice": PATRON_CHOICE.duplicate(true)}
+	m.merge(extra, true)
+	var c := flat_city(m)
+	set_terrain(c, HILL_FROM, HILL_TO, Grid.T_HILL)
+	return c
 
 
 static func set_terrain(c: City, from: Vector2i, to: Vector2i, t: int) -> void:

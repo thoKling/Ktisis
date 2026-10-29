@@ -17,8 +17,11 @@ python3.13 -m venv ~/bvenv
 ~/bvenv/bin/python tools/art/render.py              # tous les sprites (environ 3 minutes)
 ~/bvenv/bin/python tools/art/render.py agora house_4 # seulement ceux-là
 ~/bvenv/bin/python tools/art/terrain.py             # sols, rivages et routes
+~/bvenv/bin/python tools/art/terrain.py hill        # seulement le calcaire de la colline sacrée
 python3 tools/art/ui.py                            # habillage de l'interface (numpy + Pillow suffisent)
 ```
+
+Les monuments de l'Acropole (Propylées, Parthénon, temple de Poséidon, olivier sacré, source de Poséidon) sont dans `acropolis.py`, avec leurs étapes de chantier (`<id>_s0`, `_s1`...).
 
 Pour ajouter un bâtiment : une fonction décorée `@building("<id>", taille)` dans `buildings.py`. Repère : 1 unité = 1 tuile, `tbox`/`cyl`/... prennent des coordonnées de tuiles (x vers le bas-droite de l'écran, y vers le bas-gauche) ; les faces visibles sont en x max et y max.
 

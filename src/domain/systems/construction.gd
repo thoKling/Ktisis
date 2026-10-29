@@ -27,12 +27,18 @@ static func can_place(c, type: String, p: Vector2i) -> String:
 		return ""
 	var s: int = d["size"]
 	var meadow := 0
+	var on_hill: bool = d.get("on", "") == "hill"
 	for y in s:
 		for x in s:
 			var q := p + Vector2i(x, y)
 			if not g.in_bounds(q):
 				return "Hors de la carte"
-			if not g.is_buildable(q):
+			var hill: bool = g.terrain_at(q) == Grid.T_HILL
+			if on_hill and not hill:
+				return "Se bâtit sur la colline sacrée"
+			if hill and not on_hill and d["kind"] != "road":
+				return "La colline sacrée est réservée à ses monuments"
+			if not hill and not g.is_buildable(q):
 				return "Terrain impraticable"
 			if g.occupant(q) != -1:
 				return "Emplacement occupé"
@@ -107,6 +113,8 @@ static func demolish(c, p: Vector2i) -> bool:
 		return false
 	var bid: int = g.occupant(p)
 	if bid != -1:
+		if c.buildings[bid].def.get("sacred", false):
+			return false
 		remove_building(c, bid)
 		return true
 	if g.is_road(p):

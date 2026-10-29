@@ -55,3 +55,14 @@ func test_building_must_be_in_the_mission() -> void:
 	var c := Fixtures.flat_city({"buildings": ["road", "house"]})
 	eq(c.can_place("farm", Vector2i(10, 10)), "Non disponible dans cette mission", "bâtiment hors mission")
 	check(not c.is_available("farm"), "ferme indisponible")
+
+
+func test_the_sacred_hill_takes_only_its_monuments() -> void:
+	var c := Fixtures.contested_city()
+	eq(c.place("house", Vector2i(21, 8)), "La colline sacrée est réservée à ses monuments", "pas de maison sur la colline")
+	eq(c.place("gate", Vector2i(10, 10)), "Se bâtit sur la colline sacrée", "pas de Propylées en plaine")
+	eq(c.place("gate", Vector2i(19, 8)), "Se bâtit sur la colline sacrée", "à cheval sur le bord")
+	place_ok(c, "road", Vector2i(20, 8))
+	place_ok(c, "gate", Vector2i(21, 8))
+	c.choose_patron("athena")
+	place_ok(c, "temple_athena", Vector2i(23, 9))

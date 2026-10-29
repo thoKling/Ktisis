@@ -22,7 +22,25 @@ func _process(_delta: float) -> bool:
 		main.start_mission(mission)
 	elif step == 3:
 		var g = main.game
+		if g.city.needs_patron_choice():
+			# L'écran de choix : on prend le second prétendant, par son bouton.
+			var buttons: Array = g.hud._modal.find_children("*", "Button", true, false)
+			buttons[buttons.size() - 1].pressed.emit()
+			if g.city.patron == "" or g.speed == 0:
+				printerr("mission %d : le choix du protecteur ne marche pas" % mission)
+				failures += 1
 		g.hud._close_modal()
+		# Sur le plateau de la colline, relevé, la souris doit viser la bonne tuile
+		# (les pentes tournées vers le fond sont en partie cachées par les tuiles de devant).
+		for y in g.city.grid.height:
+			for x in g.city.grid.width:
+				var q := Vector2i(x, y)
+				var top: float = g.relief.corner(x, y)
+				var plateau: bool = top > 0.0 and g.relief.corner(x + 1, y + 1) == top and g.relief.corner(x + 1, y) == top \
+					and g.relief.corner(x, y + 1) == top
+				if plateau and g.relief.tile_at(g.relief.to_screen(Vector2(q) + Vector2(0.5, 0.5))) != q:
+					printerr("mission %d : la tuile %s de la colline est mal visée" % [mission, q])
+					failures += 1
 		g.camera.position = Iso.to_screen(Vector2(12, g.city.entry.y))
 	elif step == 5:
 		var g = main.game
@@ -65,7 +83,7 @@ func _process(_delta: float) -> bool:
 
 
 func _click(g, tile: Vector2i, press: bool) -> void:
-	var world := Iso.to_screen(Vector2(tile) + Vector2(0.5, 0.5))
+	var world: Vector2 = g.relief.to_screen(Vector2(tile) + Vector2(0.5, 0.5))
 	var screen: Vector2 = g.get_viewport().get_canvas_transform() * world
 	var mm := InputEventMouseMotion.new()
 	mm.position = screen

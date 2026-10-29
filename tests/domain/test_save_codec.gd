@@ -30,3 +30,16 @@ func test_unknown_mission_gives_null() -> void:
 	var d := SaveCodec.to_dict(c)
 	d["mission"] = "inconnue"
 	check(SaveCodec.from_dict(c.catalog, d) == null, "mission inconnue")
+
+
+func test_patron_choice_survives_a_reload() -> void:
+	var c := Fixtures.contested_city()
+	c.choose_patron("poseidon")
+	c.catalog.missions = [c.mission]
+	var c2 = SaveCodec.from_dict(c.catalog, JSON.parse_string(JSON.stringify(SaveCodec.to_dict(c))))
+	eq(c2.patron, "poseidon", "protecteur")
+	eq(c2.rival(), "athena", "déesse éconduite")
+	check(not c2.needs_patron_choice(), "pas de nouveau choix")
+	eq(c2.building_at(Vector2i(26, 6)).type, "spring_gift", "la source est toujours là")
+	eq(c2.production_mult("fish"), 1.5, "les dons durent")
+	check(c2.is_available("temple_poseidon"), "son temple se bâtit toujours")

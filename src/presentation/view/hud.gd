@@ -10,6 +10,8 @@ const CATEGORY_ICONS := {
 	"routes": "road", "habitat": "house", "alimentation": "wheat", "industrie": "olive",
 	"stockage": "amph", "services": "drop", "religion": "altar", "beaute": "cypress", "monuments": "temple",
 }
+## Icône du présent de chaque prétendant, sur l'écran de choix.
+const GOD_ICONS := {"athena": "olive", "poseidon": "drop"}
 const LOG_COLORS := {"good": UiTheme.GOOD, "bad": UiTheme.BAD, "warn": UiTheme.WARN}
 const LOG_LINES := 4
 
@@ -109,9 +111,10 @@ func _build_dock() -> void:
 	box.add_child(HSeparator.new())
 	var defs = game.city.catalog
 	for cat in defs.categories:
+		# Tout ce que la mission propose ; ce qui n'est pas encore permis (le temple d'un dieu non choisi) est filtré à l'ouverture.
 		var types := []
 		for id in defs.building_order:
-			if defs.buildings[id]["category"] == cat["id"] and game.city.is_available(id):
+			if defs.buildings[id]["category"] == cat["id"] and id in game.city.mission.get("buildings", []):
 				types.append(id)
 		if types.is_empty():
 			continue
@@ -154,11 +157,8 @@ func _build_side() -> void:
 
 	box.add_child(HSeparator.new())
 	box.add_child(_section("laurel", "Dieux"))
-	var threshold := -1.0
-	if game.city.mission.get("patron_contest", false):
-		threshold = float(game.city.mission.get("patron_threshold", 70))
 	for god in game.city.favor:
-		box.add_child(_god_row(god, threshold))
+		box.add_child(_god_row(god))
 
 	box.add_child(HSeparator.new())
 	_info_title = _label("", "Section")
@@ -174,7 +174,7 @@ func _build_side() -> void:
 	box.add_child(_info_grid)
 
 
-func _god_row(god: String, threshold: float) -> Control:
+func _god_row(god: String) -> Control:
 	var g: Dictionary = game.city.catalog.gods[god]
 	var grid := GridContainer.new()
 	grid.columns = 2
@@ -196,18 +196,6 @@ func _god_row(god: String, threshold: float) -> Control:
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grid.add_child(bar)
-	if threshold >= 0.0:
-		# Repère du seuil à atteindre pour devenir le dieu protecteur.
-		var mark := ColorRect.new()
-		mark.color = UiTheme.INK
-		mark.anchor_left = threshold / 100.0
-		mark.anchor_right = threshold / 100.0
-		mark.offset_left = -1
-		mark.offset_right = 1
-		mark.offset_top = -3
-		mark.anchor_bottom = 1.0
-		mark.offset_bottom = 3
-		bar.add_child(mark)
 	_god_rows[god] = {"name": name, "bar": bar}
 	return grid
 
@@ -352,6 +340,8 @@ func _toggle_category(cat_id: String, title: String, types: Array) -> void:
 		c.queue_free()
 	_build_rows.clear()
 	for id in types:
+		if not game.city.is_available(id):
+			continue
 		var row := _build_row(id, CATEGORY_ICONS.get(cat_id, "temple"))
 		_build_rows[id] = row
 		_flyout_rows.add_child(row)
@@ -391,6 +381,8 @@ func refresh() -> void:
 		var txt := "%s · faveur %d" % [g["name"], int(c.favor[god])]
 		if c.patron == god:
 			txt += " · protecteur"
+		elif c.rival() == god:
+			txt += " · jaloux"
 		_god_rows[god]["name"].text = txt
 		_god_rows[god]["bar"].value = c.favor[god]
 	var b = game.selected_building()
@@ -516,9 +508,52 @@ func show_intro(mission: Dictionary) -> void:
 	var tips: Array = mission.get("tips", [])
 	if not tips.is_empty():
 		text += "\n\nConseils :\n• " + "\n• ".join(tips)
+	if game.city.needs_patron_choice():
+		_show_modal(mission.get("title", ""), text, [], _patron_cards())
+		return
 	_show_modal(mission.get("title", ""), text, [["Commencer", func():
 		_close_modal()
 		game.set_speed(1)]])
+
+
+## Une carte par prétendant : son présent, ce qu'il demande, et le bouton qui le choisit.
+func _patron_cards() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	for o in game.city.patron_options():
+		var god: String = o["god"]
+		var g: Dictionary = game.city.catalog.gods[god]
+		var card := PanelContainer.new()
+		card.theme_type_variation = "Card"
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(card)
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 8)
+		card.add_child(box)
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 8)
+		head.add_child(UiTheme.icon_rect(GOD_ICONS.get(god, "laurel"), Color(g.get("color", "#a4462a")), 26))
+		var name := _label(g["name"], "Title")
+		head.add_child(name)
+		box.add_child(head)
+		var sub := _label(g.get("title", ""), "Muted")
+		box.add_child(sub)
+		var pitch := _label(o.get("pitch", ""), "")
+		pitch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		pitch.custom_minimum_size = Vector2(300, 0)
+		pitch.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		box.add_child(pitch)
+		var b := Button.new()
+		b.text = "Choisir %s" % g["name"]
+		b.theme_type_variation = "Primary"
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 40)
+		b.pressed.connect(func():
+			game.choose_patron(god)
+			_close_modal()
+			game.set_speed(1))
+		box.add_child(b)
+	return row
 
 
 func show_victory(mission: Dictionary, has_next: bool) -> void:
@@ -531,7 +566,7 @@ func show_victory(mission: Dictionary, has_next: bool) -> void:
 
 
 ## La dernière action est l'action principale, en terre cuite.
-func _show_modal(title: String, text: String, buttons: Array) -> void:
+func _show_modal(title: String, text: String, buttons: Array, extra: Control = null) -> void:
 	_close_modal()
 	var bg := ColorRect.new()
 	bg.color = Color(0.12, 0.08, 0.04, 0.55)
@@ -562,6 +597,8 @@ func _show_modal(title: String, text: String, buttons: Array) -> void:
 	body.custom_minimum_size = Vector2(640, 0)
 	body.add_theme_constant_override("line_spacing", 3)
 	box.add_child(body)
+	if extra != null:
+		box.add_child(extra)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_END
 	row.add_theme_constant_override("separation", 10)

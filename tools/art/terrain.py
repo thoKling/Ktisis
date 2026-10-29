@@ -182,6 +182,29 @@ def rock_ground():
     cut_tiles(img, origin, "3")
 
 
+def hill_ground():
+    """Colline sacrée : calcaire blanchi par le soleil, dalles fendues, touffes d'herbe sèche."""
+    u, v, origin, size = patch_coords()
+    col = paint(u, v, ["#c9b993", "#d6c7a2", "#e2d5b3", "#d9c9a1"], Field(5, 11), contrast=1.5)
+    img = Image.fromarray(np.clip(col, 0, 255).astype(np.uint8))
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(11)
+    # Fissures du rocher : courts traits brisés.
+    pts = [(rnd.uniform(0, K), rnd.uniform(0, K)) for _ in range(70)]
+    for k, (uu, vv) in enumerate(wrapped(pts)):
+        x, y = to_px(uu, vv, origin)
+        c = (168, 150, 116) if (k // 9) % 2 else (186, 170, 136)
+        pts2 = [(x, y)]
+        for _ in range(3):
+            x += rnd.uniform(-7, 7) * SS
+            y += rnd.uniform(-3, 3) * SS
+            pts2.append((x, y))
+        d.line(pts2, fill=c, width=SS)
+    dots(img, origin, rnd, 220, ["#bcab85", "#efe6cf", "#a99a78"], r=(0.7, 1.8))
+    strokes(img, origin, rnd, 260, ["#9a9a58", "#b0a764", "#8a8a4c"], length=(2, 4))
+    cut_tiles(img, origin, "5")
+
+
 def water():
     u, v, origin, size = patch_coords()
     col = paint(u, v, ["#2c6a98", "#3477a6", "#3d84b2", "#468fba"], Field(4, 9), contrast=1.5)
@@ -284,11 +307,9 @@ def roads():
 
 
 if __name__ == "__main__":
-    grass()
-    meadow()
-    forest_floor()
-    rock_ground()
-    water()
-    shores()
-    roads()
+    import sys
+    steps = {"grass": grass, "meadow": meadow, "forest": forest_floor, "rock": rock_ground, "hill": hill_ground,
+             "water": water, "shores": shores, "roads": roads}
+    for name in sys.argv[1:] or steps:
+        steps[name]()
     print("ok terrain")

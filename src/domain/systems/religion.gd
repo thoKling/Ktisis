@@ -1,5 +1,5 @@
 extends RefCounted
-## Dieux : faveur, fêtes, bénédictions, colères et concours pour le patronage de la cité.
+## Dieux : faveur, fêtes, bénédictions, colères, et choix du dieu protecteur de la cité.
 
 const Rules = preload("res://src/domain/rules.gd")
 const Effects = preload("res://src/domain/systems/effects.gd")
@@ -29,12 +29,15 @@ static func monthly(c) -> void:
 				if b.religion.get(god, 0) > c.tick:
 					covered += 1
 			var delta := covered / float(inhabited.size()) * 4.0 - 1.0
+			if god == rival(c):
+				delta -= float(c.mission["patron_choice"].get("rival_jealousy", 0.0))
 			if Monuments.sanctuary_complete(c, god):
 				delta += 2.0
 			var before: float = c.favor[god]
 			c.favor[god] = clampf(before + delta, 0.0, 100.0)
 			if before > Rules.UNHAPPY_FAVOR and c.favor[god] <= Rules.UNHAPPY_FAVOR:
-				c.log_event("%s est mécontent de vous : bâtissez-lui des autels ou offrez-lui une fête." % c.catalog.god_name(god), "warn")
+				c.log_event("%s est %s de vous : bâtissez-lui des autels ou offrez-lui une fête." % [
+					c.catalog.god_name(god), c.catalog.agree(god, "mécontent", "mécontente")], "warn")
 		var gd: Dictionary = c.catalog.gods[god]
 		if c.favor[god] >= Rules.BLESSING_FAVOR and cd["blessing"] == 0 and c.rng.randf() < 0.25:
 			cd["blessing"] = 12
@@ -42,23 +45,55 @@ static func monthly(c) -> void:
 		elif c.favor[god] <= Rules.WRATH_FAVOR and cd["wrath"] == 0 and not inhabited.is_empty() and c.rng.randf() < 0.25:
 			cd["wrath"] = 8
 			apply(c, gd["wrath"], god, "bad")
-	_patron_contest(c)
 
 
-## Mission à concours : le premier dieu à atteindre le seuil devient patron et laisse son présent.
-static func _patron_contest(c) -> void:
-	if not c.mission.get("patron_contest", false) or c.patron != "":
-		return
-	var threshold := float(c.mission.get("patron_threshold", 70))
-	var best := ""
-	for god in c.favor:
-		if c.favor[god] >= threshold and (best == "" or c.favor[god] > c.favor[best]):
-			best = god
-	if best == "":
-		return
-	c.patron = best
-	c.log_event("%s devient le patron de la cité !" % c.catalog.god_name(best), "good")
-	apply(c, c.catalog.gods[best]["patron_bonus"], best, "good")
+# ---------------------------------------------------------------- Choix du protecteur
+
+## Les options de la mission : [{"god", "gift", "pitch", "effects"}], vide si la mission n'en propose pas.
+static func patron_options(c) -> Array:
+	return c.mission.get("patron_choice", {}).get("options", [])
+
+
+static func patron_option(c, god: String) -> Dictionary:
+	for o in patron_options(c):
+		if o["god"] == god:
+			return o
+	return {}
+
+
+## Le dieu éconduit : jaloux, sa faveur baisse chaque mois s'il n'est pas honoré.
+static func rival(c) -> String:
+	if c.patron == "" or patron_options(c).is_empty():
+		return ""
+	for o in patron_options(c):
+		if o["god"] != c.patron:
+			return o["god"]
+	return ""
+
+
+## Le joueur choisit le protecteur : son présent apparaît sur la colline, ses dons durent toujours,
+## son temple devient constructible ; l'autre dieu se sent offensé.
+static func choose_patron(c, god: String) -> String:
+	var opt := patron_option(c, god)
+	if opt.is_empty():
+		return "Ce dieu ne prétend pas à la cité"
+	if c.patron != "":
+		return "La cité a déjà choisi son protecteur"
+	var choice: Dictionary = c.mission["patron_choice"]
+	c.patron = god
+	c.favor[god] = maxf(c.favor[god], float(choice.get("patron_favor", c.favor[god])))
+	c.log_event("Le peuple choisit %s pour protecteur de la cité !" % c.catalog.god_name(god), "good")
+	if opt.has("gift") and choice.has("gift_at"):
+		var at := Vector2i(int(choice["gift_at"][0]), int(choice["gift_at"][1]))
+		Construction.add_building(c, opt["gift"], at)
+	for e in opt.get("effects", []):
+		apply(c, e, god, "good")
+	var other := rival(c)
+	if other != "":
+		c.favor[other] = minf(c.favor[other], float(choice.get("rival_favor", c.favor[other])))
+		c.log_event("%s se sent %s : %s pour apaiser sa jalousie." % [c.catalog.god_name(other),
+			c.catalog.agree(other, "offensé", "offensée"), c.catalog.agree(other, "honorez-le", "honorez-la")], "warn")
+	return ""
 
 
 static func festival(c, god: String) -> String:
@@ -71,7 +106,7 @@ static func festival(c, god: String) -> String:
 	c.money -= Rules.FESTIVAL_COST
 	c.favor[god] = minf(100.0, c.favor[god] + Rules.FESTIVAL_FAVOR)
 	c.god_cd[god]["festival"] = Rules.FESTIVAL_COOLDOWN
-	c.log_event("Fête en l'honneur de %s : sa faveur grandit." % c.catalog.god_name(god), "good")
+	c.log_event("Fête en l'honneur %s : sa faveur grandit." % c.catalog.god_of(god), "good")
 	return ""
 
 
@@ -86,7 +121,7 @@ static func apply(c, e: Dictionary, god: String, tone: String) -> void:
 		"destroy_random":
 			var cands := []
 			for b in c.buildings.values():
-				if b.kind() != "monument":
+				if b.kind() != "monument" and not b.def.get("sacred", false):
 					cands.append(b.id)
 			for i in mini(int(e["count"]), cands.size()):
 				var k: int = c.rng.randi() % cands.size()

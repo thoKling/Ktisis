@@ -50,3 +50,21 @@ func test_touches_terrain() -> void:
 	check(g.touches_terrain(Vector2i(4, 4), 2, Grid.T_WATER, 1), "un 2x2 en (4,4) touche l'eau en (6,6)")
 	check(not g.touches_terrain(Vector2i(1, 1), 2, Grid.T_WATER, 1), "loin de l'eau")
 	check(not g.is_buildable(Vector2i(6, 6)), "on ne bâtit pas sur l'eau")
+
+
+func test_map_features_draw_the_terrain() -> void:
+	var MapGenerator = load("res://src/domain/world/map_generator.gd")
+	var gen: Dictionary = MapGenerator.generate({"width": 30, "height": 30, "seed": 3, "entry": [0, 10],
+		"meadows": 0, "forests": 0, "rocks": 0, "features": [
+			{"terrain": "water", "shape": "band", "side": "south", "depth": 4, "rough": 0},
+			{"terrain": "rock", "shape": "ellipse", "at": [15, 15], "r": [5, 3]},
+			{"terrain": "hill", "shape": "ellipse", "at": [15, 15], "r": [3, 2]},
+			{"terrain": "hill", "shape": "rect", "from": [9, 14], "to": [11, 15]}]})
+	var g: Grid = gen["grid"]
+	eq(gen["entry"], Vector2i(0, 10), "entrée choisie")
+	eq(g.terrain_at(Vector2i(5, 27)), Grid.T_WATER, "la mer au sud")
+	eq(g.terrain_at(Vector2i(5, 25)), Grid.T_GRASS, "la côte s'arrête à 4 cases")
+	eq(g.terrain_at(Vector2i(15, 15)), Grid.T_HILL, "la colline au centre")
+	eq(g.terrain_at(Vector2i(19, 15)), Grid.T_ROCK, "ses flancs rocheux")
+	eq(g.terrain_at(Vector2i(10, 14)), Grid.T_HILL, "la rampe d'accès")
+	check(not g.is_buildable(Vector2i(15, 15)), "on ne bâtit pas n'importe quoi sur la colline")

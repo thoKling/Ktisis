@@ -33,7 +33,8 @@ func _draw() -> void:
 		elif it[1] == 1:
 			_draw_walker(it[2], it[3])
 		else:
-			Art.draw_sprite(self, it[2], Iso.to_screen(Vector2(it[3]) + Vector2(1, 1)))
+			var lift: float = game.relief.height_at(Vector2(it[3]) + Vector2(0.5, 0.5))
+			Art.draw_sprite(self, it[2], Iso.to_screen(Vector2(it[3]) + Vector2(1, 1)) - Vector2(0, lift))
 	_draw_preview()
 
 
@@ -80,7 +81,15 @@ func _top_height(b, tex: Texture2D) -> float:
 	return maxf(Art.sprite_height(tex) - b.size * Iso.TH * 0.5 - 10.0, 10.0)
 
 
+## Un bâtiment posé sur une hauteur (la colline sacrée) est dessiné relevé d'autant.
 func _draw_building(b) -> void:
+	var lift: float = game.relief.height_at(Vector2(b.pos) + Vector2(b.size, b.size) * 0.5)
+	draw_set_transform(Vector2(0, -lift))
+	_draw_building_flat(b)
+	draw_set_transform(Vector2.ZERO)
+
+
+func _draw_building_flat(b) -> void:
 	var city = game.city
 	var d: Dictionary = b.def
 	var n: float = b.size
@@ -167,7 +176,7 @@ func _draw_columns(p: Vector2, n: float, h: float) -> void:
 func _draw_walker(w, p: Vector2) -> void:
 	var key: String = w.service if w.kind == "service" else w.kind
 	var col: Color = Art.WALKER_COLORS.get(key, Color.WHITE)
-	var s := Iso.to_screen(p)
+	var s: Vector2 = game.relief.to_screen(p)
 	var tex := Art.texture("walkers", key)
 	if tex != null:
 		Art.draw_sprite(self, tex, s)
@@ -195,13 +204,13 @@ func _draw_preview() -> void:
 		var col := Color(0.3, 0.9, 0.4, 0.45) if ok else Color(0.95, 0.25, 0.2, 0.45)
 		if game.tool == "demolish":
 			col = Color(0.95, 0.4, 0.1, 0.45)
-		draw_colored_polygon(Iso.diamond(Vector2(p), n), col)
+		draw_colored_polygon(game.relief.diamond(Vector2(p), n), col)
 	if game.tool == "build" and game.build_type != "" and not game.dragging:
 		var d: Dictionary = city.catalog.building(game.build_type)
 		var r: int = d.get("beauty_radius", 0)
 		if r > 0 and d["kind"] != "road":
 			var p0: Vector2i = game.build_origin(game.hover)
-			draw_polyline(_closed(Iso.diamond(Vector2(p0 - Vector2i(r, r)), d["size"] + 2 * r)), Color(1, 1, 1, 0.3), 1.0)
+			draw_polyline(_closed(game.relief.diamond(Vector2(p0 - Vector2i(r, r)), d["size"] + 2 * r)), Color(1, 1, 1, 0.3), 1.0)
 
 
 func _closed(poly: PackedVector2Array) -> PackedVector2Array:

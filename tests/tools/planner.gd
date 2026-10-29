@@ -138,17 +138,26 @@ static func build_thebes(c: City) -> bool:
 	return h >= 25 and farms >= 3
 
 
-## Mission 2 : une ville plus grande, des autels surtout pour Athéna, oliveraies et pressoir.
+## Mission 2 : Athènes autour de sa colline. Un quartier au nord (Céramique), un au sud vers le Pirée,
+## les fermes dans la plaine du Céphise ; l'Acropole et l'industrie viennent ensuite (voir wishlist).
 static func build_athenes(c: City) -> bool:
-	var y0: int = c.entry.y
-	var farms := place_linked(c, "farm", 5)
+	var rival: String = c.rival()
+	var farms := place_linked(c, "farm", 6)
+	# Un grenier au bord de la plaine, sinon les livreurs passent leur temps sur la route.
+	place_in(c, "granary", Vector2i(4, 12), Vector2i(20, 24))
+	for i in 2:
+		place_in(c, "guard_post", Vector2i(2, 2), Vector2i(20, 12))
 	place_linked(c, "fishery", 2)
-	place_linked(c, "olive_grove", 1)
-	var h := district(c, 6, 4, [y0 - 18, y0 - 9, y0, y0 + 9, y0 + 18], [
-		["agora", "fountain", "guard_post"], ["granary", "fountain", "altar_athena"], ["fountain", "plaza", "tax_office"],
-		["warehouse", "fountain", "guard_post"], ["fountain", "altar_athena", "plaza"], ["agora", "fountain", "guard_post"],
-		["fountain", "plaza", "altar_poseidon"], ["press", "fountain", "guard_post"]], 60)
-	return h >= 40 and farms >= 4
+	var h := district(c, 20, 3, [10, 17, 24], [
+		["agora", "fountain", "guard_post"], ["granary", "fountain", "altar_" + rival], ["fountain", "tax_office"],
+		["warehouse", "fountain", "altar_" + c.patron], ["agora", "fountain", "altar_" + rival], ["fountain", "granary", "guard_post"]], 60)
+	c.place_road_path(Grid.l_path(Vector2i(13, c.entry.y), Vector2i(13, 37)))
+	# La voie panathénaïque monte sur la colline par l'ouest.
+	c.place_road_path(Grid.l_path(Vector2i(13, 30), Vector2i(34, 30)))
+	h += district(c, 13, 5, [37, 44], [
+		["agora", "fountain", "altar_" + rival], ["granary", "fountain", "guard_post"], ["fountain", "tax_office", "altar_" + rival],
+		["fountain", "guard_post"], ["agora", "fountain", "altar_" + rival]], 40)
+	return h >= 50 and farms >= 5
 
 
 ## Mission 3 : d'abord une ville qui vit, l'industrie et les monuments viennent ensuite (voir wishlist).
@@ -165,8 +174,14 @@ static func build_iolcos(c: City) -> bool:
 
 
 ## Ce que le planificateur ajoute en cours de partie, dans l'ordre, quand le trésor le permet.
-static func wishlist(mission_id: String) -> Array:
-	match mission_id:
+static func wishlist(c: City) -> Array:
+	match c.mission["id"]:
+		"athenes":
+			if c.patron == "athena":
+				return [["woodcutter", 1], ["quarry", 2], ["warehouse", 2], ["olive_grove", 3], ["press", 2], ["propylaea", 1],
+					["parthenon", 1], ["quarry", 3], ["farm", 6]]
+			return [["woodcutter", 2], ["quarry", 2], ["warehouse", 2], ["fishery", 4], ["propylaea", 1],
+				["temple_poseidon", 1], ["quarry", 3], ["woodcutter", 3], ["farm", 6]]
 		"iolcos":
 			return [["woodcutter", 2], ["guard_post", 6], ["olive_grove", 1], ["press", 1], ["sheepfold", 2], ["quarry", 2],
 				["warehouse", 2], ["fishery", 3], ["argo_shipyard", 1], ["sanctuary_hera", 1], ["farm", 6]]
@@ -174,7 +189,7 @@ static func wishlist(mission_id: String) -> Array:
 
 
 static func develop(c: City, keep: int = 200) -> void:
-	for item in wishlist(c.mission["id"]):
+	for item in wishlist(c):
 		var type: String = item[0]
 		var have := 0
 		for b in c.buildings.values():
@@ -184,7 +199,9 @@ static func develop(c: City, keep: int = 200) -> void:
 			continue
 		if c.money < int(c.catalog.building(type)["cost"]) + keep:
 			return
-		if type == "guard_post":
+		if c.catalog.building(type).get("on", "") == "hill":
+			place_in(c, type, Vector2i.ZERO, Vector2i(c.grid.width, c.grid.height))
+		elif type == "guard_post":
 			var y0: int = c.entry.y
 			place_in(c, type, Vector2i(6, y0 - 18), Vector2i(42, y0 + 19))
 		else:

@@ -77,6 +77,17 @@ func god_name(id: String) -> String:
 	return gods[id]["name"] if gods.has(id) else id
 
 
+## « d'Athéna », « de Poséidon ».
+func god_of(id: String) -> String:
+	var n := god_name(id)
+	return ("d'" if n.left(1) in ["A", "E", "É", "H", "I", "O", "U"] else "de ") + n
+
+
+## Accord au féminin : agree(id, "offensé", "offensée").
+func agree(id: String, masculine: String, feminine: String) -> String:
+	return feminine if gods.get(id, {}).get("female", false) else masculine
+
+
 func mission(id: String) -> Dictionary:
 	for m in missions:
 		if m["id"] == id:

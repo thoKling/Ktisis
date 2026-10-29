@@ -55,11 +55,39 @@ func test_maps_are_playable() -> void:
 			if t == Grid.T_WATER:
 				water += 1
 		check(meadow > 50, "%s : prairies (%d)" % [m["id"], meadow])
-		if str(m["map"].get("coast", "")) != "":
+		if str(m["map"].get("coast", "")) != "" or "fishery" in m["buildings"]:
 			check(water > 100, "%s : côte" % m["id"])
 		for type in ["farm", "fishery", "quarry", "woodcutter", "argo_shipyard", "olive_grove"]:
 			if type in m["buildings"]:
 				check(_somewhere(c, type), "%s : aucun emplacement pour %s" % [m["id"], type])
+		_check_patron_choice(c)
+
+
+## Chaque prétendant a un dieu, un présent qui tient sur la colline, et son temple dans la mission.
+func _check_patron_choice(c) -> void:
+	var m: Dictionary = c.mission
+	if not m.has("patron_choice"):
+		return
+	var opts: Array = m["patron_choice"]["options"]
+	eq(opts.size(), 2, "%s : deux prétendants" % m["id"])
+	for o in opts:
+		check(o["god"] in m["gods"], "%s : %s honoré dans la mission" % [m["id"], o["god"]])
+		var temples := 0
+		for id in m["buildings"]:
+			if c.catalog.building(id).get("patron", "") == o["god"]:
+				temples += 1
+		eq(temples, 1, "%s : un temple pour %s" % [m["id"], o["god"]])
+		var trial = City.new(c.catalog, m)
+		eq(trial.choose_patron(o["god"]), "", "%s : choix de %s" % [m["id"], o["god"]])
+		var at := Vector2i(int(m["patron_choice"]["gift_at"][0]), int(m["patron_choice"]["gift_at"][1]))
+		var gift = trial.building_at(at)
+		check(gift != null and gift.type == o["gift"], "%s : présent de %s posé" % [m["id"], o["god"]])
+		for x in 2:
+			for y in 2:
+				eq(trial.grid.terrain_at(at + Vector2i(x, y)), Grid.T_HILL, "%s : présent sur la colline" % m["id"])
+		for id in m["buildings"]:
+			if c.catalog.building(id).get("on", "") == "hill" and trial.is_available(id):
+				check(_somewhere(trial, id), "%s : place pour %s sur la colline" % [m["id"], id])
 
 
 func _somewhere(c, type: String) -> bool:

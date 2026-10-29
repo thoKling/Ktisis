@@ -107,6 +107,12 @@ static func theme() -> Theme:
 	t.set_constant("separation", "HSeparator", 6)
 	t.set_stylebox("separator", "HSeparator", _line(Color("#c9bb9f")))
 
+	# Carte posée sur un panneau : le choix d'un dieu, par exemple.
+	t.set_type_variation("Card", "PanelContainer")
+	var card := _flat(Color(TERRA, 0.06), Color("#c9bb9f"), 3)
+	card.set_content_margin_all(14)
+	t.set_stylebox("panel", "Card", card)
+
 	t.set_stylebox("panel", "TooltipPanel", _flat(Color("#f4efe4"), Color("#a8977a"), 3))
 	t.set_color("font_color", "TooltipLabel", INK)
 	t.set_font_size("font_size", "TooltipLabel", 15)
