@@ -4,7 +4,7 @@ extends Node
 const CatalogLoader = preload("res://src/infrastructure/catalog_loader.gd")
 const FileStore = preload("res://src/infrastructure/file_store.gd")
 const Game = preload("res://src/presentation/game.gd")
-const Art = preload("res://src/presentation/view/art.gd")
+const UiTheme = preload("res://src/presentation/view/ui_theme.gd")
 
 var game
 var menu: CanvasLayer
@@ -22,46 +22,73 @@ func show_menu() -> void:
 		menu.queue_free()
 	menu = CanvasLayer.new()
 	add_child(menu)
-	var bg := ColorRect.new()
-	bg.color = Color("#1e2430")
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.theme = UiTheme.theme()
+	# Sans mipmaps : le marbre tuilé ne montre pas de joints.
+	root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	menu.add_child(root)
+	# Fond : une Thèbes construite, voilée pour faire ressortir la stèle.
+	var bg := TextureRect.new()
+	bg.texture = load("res://assets/ui/menu_bg.jpg")
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	menu.add_child(bg)
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	root.add_child(bg)
+	var veil := ColorRect.new()
+	veil.color = Color(0.16, 0.11, 0.06, 0.45)
+	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(veil)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.add_child(center)
+	root.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 22)
+	panel.add_child(margin)
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(460, 0)
+	box.custom_minimum_size = Vector2(440, 0)
 	box.add_theme_constant_override("separation", 10)
-	center.add_child(box)
+	margin.add_child(box)
+	box.add_child(UiTheme.frieze())
 	var title := Label.new()
-	title.text = "KTISIS"
+	title.text = "Ktisis"
+	title.theme_type_variation = "Title"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 56)
-	title.add_theme_color_override("font_color", Art.MARBLE)
+	title.add_theme_font_size_override("font_size", 64)
 	box.add_child(title)
 	var sub := Label.new()
 	sub.text = "La fondation des cités, sous le regard des dieux"
+	sub.theme_type_variation = "Muted"
+	sub.add_theme_font_size_override("font_size", 17)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_color_override("font_color", Art.OCHRE)
 	box.add_child(sub)
-	box.add_child(HSeparator.new())
+	box.add_child(UiTheme.frieze())
 	var missions: Array = CatalogLoader.load_catalog().missions
 	var open := FileStore.unlocked_missions()
 	for i in missions.size():
-		var b := Button.new()
-		b.text = "%d. %s" % [i + 1, missions[i]["title"]]
+		var b := _menu_button("%d. %s" % [i + 1, missions[i]["title"]], func(): start_mission(i))
 		b.disabled = i >= open
-		b.pressed.connect(func(): start_mission(i))
+		if b.disabled:
+			b.tooltip_text = "Terminez la mission précédente pour la débloquer."
 		box.add_child(b)
-	var load_b := Button.new()
-	load_b.text = "Reprendre la partie sauvegardée"
+	var load_b := _menu_button("Reprendre la partie sauvegardée", load_saved)
+	load_b.icon = UiTheme.icon("scroll")
 	load_b.disabled = not FileStore.has_save()
-	load_b.pressed.connect(load_saved)
 	box.add_child(load_b)
-	var quit_b := Button.new()
-	quit_b.text = "Quitter"
-	quit_b.pressed.connect(func(): get_tree().quit())
-	box.add_child(quit_b)
+	box.add_child(_menu_button("Quitter", func(): get_tree().quit()))
+
+
+func _menu_button(text: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(0, 44)
+	b.add_theme_font_size_override("font_size", 18)
+	b.focus_mode = Control.FOCUS_NONE
+	b.pressed.connect(cb)
+	return b
 
 
 func start_mission(index: int, loaded_city = null) -> void:
