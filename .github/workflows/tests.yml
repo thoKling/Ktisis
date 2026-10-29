@@ -1,0 +1,37 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.3-stable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Godot
+        run: |
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          echo "fd52bb4ba8acc30ca5accd1c566d470ad7282f891ccc0995dfafabcf92bcf76280ce182bf9d80ebd885f3ed2165d01e1fc3f2928436b15498dfbd98656c2a45a  godot.zip" | sha512sum --check
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
+
+      - name: Importer le projet
+        run: timeout 120 ./godot --headless --editor --quit --path . || true
+
+      - name: Tests de la simulation
+        run: |
+          set -o pipefail
+          timeout 600 ./godot --headless --path . -s res://tests/run.gd 2>&1 | tee tests.log
+          ! grep -E "SCRIPT ERROR|Parse Error" tests.log
+
+      - name: Test de fumée (scène principale, clics simulés)
+        run: |
+          set -o pipefail
+          timeout 120 ./godot --headless --path . -s res://tests/presentation/smoke.gd 2>&1 | tee smoke.log
+          ! grep -E "SCRIPT ERROR|Parse Error" smoke.log

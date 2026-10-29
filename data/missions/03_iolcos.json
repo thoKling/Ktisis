@@ -1,0 +1,24 @@
+{
+  "id": "iolcos",
+  "title": "Iolcos et l'Argo",
+  "intro": [
+    "À Iolcos, le roi Pélias a usurpé le trône de son frère. Quand Jason, l'héritier légitime, se présente avec une seule sandale, Pélias se souvient de l'oracle et l'envoie chercher la Toison d'or en Colchide, au bout du monde connu.",
+    "Il faut un navire comme on n'en a jamais vu. Argos le charpentier s'en charge, et Héra, qui protège Jason, veille sur l'entreprise.",
+    "Faites prospérer Iolcos et achevez le chantier de l'Argo : la coque de bois, la voile de laine, puis les provisions de l'équipage."
+  ],
+  "tips": [
+    "Le chantier se pose au bord de l'eau. Ses étapes réclament des matériaux pris dans vos entrepôts et greniers.",
+    "Les bûcherons travaillent près des forêts, les bergeries donnent la laine.",
+    "Les villas veulent huile, laine, beauté et l'accès à un sanctuaire achevé."
+  ],
+  "outro": "L'Argo glisse vers la mer, cinquante héros à son bord. Iolcos regarde partir Jason vers la Colchide, sous la garde d'Héra. Leur aventure ne fait que commencer.",
+  "map": {"width": 60, "height": 60, "seed": 3301, "coast": "east", "lakes": 1, "meadows": 8, "forests": 7, "rocks": 4},
+  "start_money": 3500,
+  "gods": ["hera"],
+  "buildings": ["road", "roadblock", "house", "farm", "fishery", "granary", "warehouse", "agora", "olive_grove", "press", "sheepfold", "quarry", "woodcutter", "fountain", "tax_office", "guard_post", "altar_hera", "garden", "plaza", "statue", "sanctuary_hera", "argo_shipyard"],
+  "objectives": [
+    {"type": "monument", "building": "argo_shipyard"},
+    {"type": "population", "value": 800},
+    {"type": "houses_level", "level": 4, "count": 4}
+  ]
+}

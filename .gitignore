@@ -1,8 +1,9 @@
 # Godot
 .godot/
-*.import
 export/
 *.translation
 # Outils
 godot
 *.zip
+# Rendus Blender
+tools/art/__pycache__/

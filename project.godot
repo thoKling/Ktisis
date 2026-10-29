@@ -1,0 +1,27 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+
+config/name="Ktisis"
+config/description="City builder sur la Grèce mythologique."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.12, 0.14, 0.18, 1)
+textures/canvas_textures/default_texture_filter=3
+
+[importer_defaults]
+
+texture={
+"mipmaps/generate": true
+}
