@@ -32,6 +32,7 @@ var _flyout_title: Label
 var _flyout_rows: VBoxContainer
 var _build_rows := {}
 var _objectives: VBoxContainer
+var _stage_label: Label
 var _god_rows := {}
 var _info_title: Label
 var _info_grid: GridContainer
@@ -151,6 +152,10 @@ func _build_side() -> void:
 	var title := _label(game.city.mission.get("title", ""), "Title")
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(title)
+	_stage_label = _label("", "Muted")
+	_stage_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stage_label.visible = false
+	box.add_child(_stage_label)
 	_objectives = VBoxContainer.new()
 	_objectives.add_theme_constant_override("separation", 4)
 	box.add_child(_objectives)
@@ -395,6 +400,10 @@ func refresh() -> void:
 
 
 func _refresh_objectives(c) -> void:
+	var st: Dictionary = c.current_stage()
+	_stage_label.visible = not st.is_empty()
+	if not st.is_empty():
+		_stage_label.text = "Étape %d sur %d · %s" % [st["index"] + 1, st["count"], st["title"]]
 	var objs: Array = c.objectives()
 	while _objectives.get_child_count() < objs.size():
 		var row := HBoxContainer.new()
@@ -405,6 +414,9 @@ func _refresh_objectives(c) -> void:
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(l)
 		_objectives.add_child(row)
+	# Une étape peut avoir moins d'objectifs que la précédente.
+	for i in _objectives.get_child_count():
+		_objectives.get_child(i).visible = i < objs.size()
 	for i in objs.size():
 		var row := _objectives.get_child(i)
 		var done: bool = objs[i]["done"]
@@ -508,10 +520,29 @@ func show_intro(mission: Dictionary) -> void:
 	var tips: Array = mission.get("tips", [])
 	if not tips.is_empty():
 		text += "\n\nConseils :\n• " + "\n• ".join(tips)
+	var st: Dictionary = game.city.current_stage()
+	if not st.is_empty():
+		text += "\n\nPremière étape · %s\n%s" % [st["title"], st["text"]]
 	if game.city.needs_patron_choice():
 		_show_modal(mission.get("title", ""), text, [], _patron_cards())
 		return
 	_show_modal(mission.get("title", ""), text, [["Commencer", func():
+		_close_modal()
+		game.set_speed(1)]])
+
+
+## Début d'une étape : son récit, et les cartes des dieux si c'est l'heure du choix.
+func show_stage(c) -> void:
+	var st: Dictionary = c.current_stage()
+	if st.is_empty():
+		if c.needs_patron_choice():
+			_show_modal(c.mission.get("title", ""), "", [], _patron_cards())
+		return
+	var title := "Étape %d sur %d · %s" % [st["index"] + 1, st["count"], st["title"]]
+	if c.needs_patron_choice():
+		_show_modal(title, st["text"], [], _patron_cards())
+		return
+	_show_modal(title, st["text"], [["Continuer", func():
 		_close_modal()
 		game.set_speed(1)]])
 

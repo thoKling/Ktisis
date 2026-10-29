@@ -15,7 +15,12 @@ func test_references_are_valid() -> void:
 			check(cat.buildings.has(b), "%s : bâtiment inconnu %s" % [m["id"], b])
 		for g in m["gods"]:
 			check(cat.gods.has(g), "%s : dieu inconnu %s" % [m["id"], g])
-		for o in m["objectives"]:
+		var all_objectives: Array = m.get("objectives", [])
+		for st in m.get("stages", []):
+			check(st.get("title", "") != "" and st.get("text", "") != "", "%s : étape sans titre ou sans récit" % m["id"])
+			all_objectives += st["objectives"]
+		check(not all_objectives.is_empty(), "%s : objectifs" % m["id"])
+		for o in all_objectives:
 			if o["type"] == "monument":
 				check(cat.buildings.has(o["building"]), "%s : monument inconnu" % m["id"])
 	var categories := []
@@ -78,6 +83,12 @@ func _check_patron_choice(c) -> void:
 				temples += 1
 		eq(temples, 1, "%s : un temple pour %s" % [m["id"], o["god"]])
 		var trial = City.new(c.catalog, m)
+		# Le choix vient à l'étape qui le demande.
+		for i in m.get("stages", []).size():
+			for so in m["stages"][i]["objectives"]:
+				if so["type"] == "patron":
+					trial.stage = i
+		check(trial.needs_patron_choice(), "%s : une étape demande le choix" % m["id"])
 		eq(trial.choose_patron(o["god"]), "", "%s : choix de %s" % [m["id"], o["god"]])
 		var at := Vector2i(int(m["patron_choice"]["gift_at"][0]), int(m["patron_choice"]["gift_at"][1]))
 		var gift = trial.building_at(at)

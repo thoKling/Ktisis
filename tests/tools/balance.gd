@@ -22,17 +22,24 @@ func _initialize() -> void:
 static func play(mi: int, max_months: int, verbose: bool, embellish: bool = true, god: String = "") -> Dictionary:
 	var catalog = CatalogLoader.load_catalog()
 	var c := City.new(catalog, catalog.missions[mi])
-	if c.needs_patron_choice():
-		c.choose_patron(god if god != "" else c.patron_options()[0]["god"])
 	var builders := [Planner.build_thebes, Planner.build_athenes, Planner.build_iolcos]
 	var ok: bool = builders[mi].call(c)
 	if verbose:
 		print("construit : %s, %d bâtiments, trésor %d" % [ok, c.buildings.size(), c.money])
-	var favorite: String = c.patron if c.patron != "" else c.mission["gods"][0]
 	for m in max_months:
 		c.run_months(1)
-		# Le dieu éconduit d'abord : il faut l'apaiser.
-		if c.rival() != "":
+		if c.needs_patron_choice():
+			c.choose_patron(god if god != "" else c.patron_options()[0]["god"])
+			if verbose:
+				print("m%d : choix de %s" % [c.months, c.patron])
+		var favorite: String = c.patron if c.patron != "" else c.mission["gods"][0]
+		if c.patron == "" and not c.patron_options().is_empty():
+			# Avant le jugement : les deux prétendants doivent être honorés.
+			for o in c.patron_options():
+				if c.favor[o["god"]] < 60.0:
+					c.festival(o["god"])
+		elif c.rival() != "":
+			# Le dieu éconduit d'abord : il faut l'apaiser.
 			if c.favor[c.rival()] < 50.0:
 				c.festival(c.rival())
 			if c.favor[favorite] < 70.0:

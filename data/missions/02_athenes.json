@@ -2,13 +2,13 @@
   "id": "athenes",
   "title": "Athéna contre Poséidon",
   "intro": [
-    "Sur le rocher de l'Attique, le roi Cécrops gouverne un peuple qui n'a pas encore de dieu protecteur. Deux immortels se disputent la cité : Poséidon, seigneur des mers, et Athéna, née tout armée du front de Zeus.",
-    "Chacun a fait son présent sur la colline. Poséidon a frappé le rocher de son trident et une source a jailli ; Athéna a planté le premier olivier. C'est à vous, au nom du peuple, de choisir.",
-    "Le dieu choisi protégera la cité pour toujours, et sur la colline sacrée vous lui bâtirez l'Acropole : les Propylées, puis son temple. Mais le dieu éconduit ne pardonnera pas facilement : honorez-le aussi, ou craignez sa colère."
+    "Sur le rocher de l'Attique, le roi Cécrops rassemble un peuple de bergers et de pêcheurs. La ville n'a ni murs, ni temple, ni dieu protecteur.",
+    "Mais deux immortels ont déjà les yeux sur elle : Poséidon, seigneur des mers, et Athéna, née tout armée du front de Zeus. Le jour viendra où il faudra choisir entre eux.",
+    "D'abord, faites de ce village une ville : des maisons, du pain, de l'eau."
   ],
   "tips": [
+    "La mission se joue en quatre étapes : le choix du dieu protecteur vient à la troisième.",
     "La colline sacrée, au centre, ne reçoit que les routes et les monuments de l'Acropole. On y monte par l'ouest.",
-    "Le dieu éconduit perd de la faveur chaque mois : couvrez les maisons de ses prêtres et offrez-lui des fêtes.",
     "Le marbre vient des carrières du Pentélique, au nord-est ; le bois, des forêts du Parnès et de l'Hymette.",
     "Les oliveraies veulent la plaine fertile du Céphise, à l'ouest ; les quais de pêche, la baie du Pirée et de Phalère."
   ],
@@ -270,28 +270,6 @@
     "parthenon",
     "temple_poseidon"
   ],
-  "objectives": [
-    {
-      "type": "monument",
-      "building": "propylaea"
-    },
-    {
-      "type": "patron_monument"
-    },
-    {
-      "type": "rival_favor",
-      "value": 40
-    },
-    {
-      "type": "population",
-      "value": 600
-    },
-    {
-      "type": "houses_level",
-      "level": 3,
-      "count": 6
-    }
-  ],
   "patron_choice": {
     "gift_at": [
       35,
@@ -341,5 +319,73 @@
         ]
       }
     ]
-  }
+  },
+  "stages": [
+    {
+      "title": "Le rocher de Cécrops",
+      "text": "Faites de ce village une ville : des maisons, du pain, de l'eau. Les familles viendront s'installer si on leur donne de quoi vivre.",
+      "objectives": [
+        {
+          "type": "population",
+          "value": 250
+        },
+        {
+          "type": "houses_level",
+          "level": 2,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "title": "Deux dieux courtisent la cité",
+      "text": "La ville grandit, et les dieux s'en sont aperçus. Poséidon et Athéna la veulent tous deux. Honorez-les l'un comme l'autre, et ouvrez la colline sacrée : bâtissez les Propylées, la porte de l'Acropole, où le jugement aura lieu.",
+      "objectives": [
+        {
+          "type": "favor",
+          "god": "athena",
+          "value": 55
+        },
+        {
+          "type": "favor",
+          "god": "poseidon",
+          "value": 55
+        },
+        {
+          "type": "monument",
+          "building": "propylaea"
+        }
+      ]
+    },
+    {
+      "title": "Le jugement de Cécrops",
+      "text": "Sur la colline, devant le peuple assemblé, les deux dieux font leur présent. Poséidon frappe le rocher de son trident : une source jaillit. Athéna plante le premier olivier. Au nom du peuple, choisissez le protecteur d'Athènes. Ce choix est pour toujours, et l'autre ne pardonnera pas facilement.",
+      "objectives": [
+        {
+          "type": "patron"
+        }
+      ]
+    },
+    {
+      "title": "L'Acropole",
+      "text": "Le protecteur est choisi. Bâtissez-lui son temple sur la colline sacrée, faites d'Athènes une grande ville, et apaisez le dieu éconduit avant que sa colère n'éclate.",
+      "objectives": [
+        {
+          "type": "patron_monument"
+        },
+        {
+          "type": "rival_favor",
+          "value": 40
+        },
+        {
+          "type": "population",
+          "value": 600
+        },
+        {
+          "type": "houses_level",
+          "level": 3,
+          "count": 6
+        }
+      ]
+    }
+  ]
 }

@@ -18,7 +18,7 @@ static func to_dict(c) -> Dictionary:
 		"tick": c.tick, "months": c.months, "money": c.money,
 		"terrain": Marshalls.raw_to_base64(c.grid.terrain), "roads": Marshalls.raw_to_base64(c.grid.roads),
 		"buildings": bl, "favor": c.favor.duplicate(), "god_cd": c.god_cd.duplicate(true),
-		"effects": c.effects.duplicate(true), "patron": c.patron, "won": c.won,
+		"effects": c.effects.duplicate(true), "patron": c.patron, "stage": c.stage, "won": c.won,
 	}
 
 
@@ -55,6 +55,7 @@ static func from_dict(catalog, d: Dictionary):
 		e["months_left"] = int(e["months_left"])
 		c.effects.append(e)
 	c.patron = d.get("patron", "")
+	c.stage = int(d.get("stage", 0))
 	c.won = bool(d.get("won", false))
 	Labor.allocate(c)
 	return c

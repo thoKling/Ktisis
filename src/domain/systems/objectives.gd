@@ -1,15 +1,30 @@
 extends RefCounted
 ## Objectifs de mission : état de chacun et victoire quand tout est rempli.
+## Une mission peut se jouer en étapes (« stages ») : chacune a son récit et ses objectifs,
+## la suivante commence quand tout est rempli, et la dernière achevée donne la victoire.
 
 const Housing = preload("res://src/domain/systems/housing.gd")
 const Monuments = preload("res://src/domain/systems/monuments.gd")
 
 
-## [{"text", "done"}] dans l'ordre de la mission.
+## Les étapes de la mission : [{"title", "text", "objectives"}], vide pour une mission d'un seul tenant.
+static func stages(c) -> Array:
+	return c.mission.get("stages", [])
+
+
+## Les objectifs à remplir maintenant : ceux de l'étape en cours, ou ceux de la mission.
+static func current(c) -> Array:
+	var st := stages(c)
+	if st.is_empty():
+		return c.mission.get("objectives", [])
+	return st[mini(c.stage, st.size() - 1)]["objectives"]
+
+
+## [{"text", "done"}] dans l'ordre de la mission (ou de l'étape en cours).
 static func evaluate(c) -> Array:
 	var res := []
 	var levels := Housing.levels(c)
-	for o in c.mission.get("objectives", []):
+	for o in current(c):
 		var text := ""
 		var done := false
 		match o["type"]:
@@ -75,5 +90,12 @@ static func check(c) -> void:
 	for o in evaluate(c):
 		if not o["done"]:
 			return
+	var st := stages(c)
+	if c.stage + 1 < st.size():
+		c.stage += 1
+		c.log_event("Nouvelle étape : %s" % st[c.stage]["title"], "good")
+		# Une étape peut être déjà remplie en arrivant (la cité a pris de l'avance).
+		check(c)
+		return
 	c.won = true
 	c.log_event("Tous les objectifs sont remplis !", "good")

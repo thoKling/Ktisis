@@ -32,6 +32,7 @@ var selected_id := -1
 var _acc := 0.0
 var _events_read := 0
 var _won_shown := false
+var _stage_shown := 0
 var _pan_drag := false
 
 var relief
@@ -65,9 +66,14 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.game = self
 	add_child(hud)
-	if city.tick == 0 or city.needs_patron_choice():
+	_stage_shown = city.stage
+	if city.tick == 0:
 		speed = 0
 		hud.show_intro(city.mission)
+	elif city.needs_patron_choice():
+		# Partie rechargée au moment du jugement.
+		speed = 0
+		hud.show_stage(city)
 	_won_shown = city.won
 	_events_read = city.events.size()
 
@@ -84,6 +90,11 @@ func _process(delta: float) -> void:
 	while _events_read < city.events.size():
 		hud.add_log(city.events[_events_read])
 		_events_read += 1
+	if city.stage != _stage_shown and not city.won:
+		# Nouvelle étape : on s'arrête pour la raconter (ou pour le choix du protecteur).
+		_stage_shown = city.stage
+		speed = 0
+		hud.show_stage(city)
 	if city.won and not _won_shown:
 		_won_shown = true
 		speed = 0

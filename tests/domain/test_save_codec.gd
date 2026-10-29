@@ -36,8 +36,10 @@ func test_patron_choice_survives_a_reload() -> void:
 	var c := Fixtures.contested_city()
 	c.choose_patron("poseidon")
 	c.catalog.missions = [c.mission]
+	c.stage = 1
 	var c2 = SaveCodec.from_dict(c.catalog, JSON.parse_string(JSON.stringify(SaveCodec.to_dict(c))))
 	eq(c2.patron, "poseidon", "protecteur")
+	eq(c2.stage, 1, "étape")
 	eq(c2.rival(), "athena", "déesse éconduite")
 	check(not c2.needs_patron_choice(), "pas de nouveau choix")
 	eq(c2.building_at(Vector2i(26, 6)).type, "spring_gift", "la source est toujours là")

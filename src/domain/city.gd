@@ -45,6 +45,8 @@ var favor := {}
 var god_cd := {}
 var effects := []
 var patron := ""
+## Étape en cours, pour une mission en plusieurs étapes.
+var stage := 0
 var won := false
 
 ## Journal des événements : {"text", "kind" (info, good, warn, bad), "month"}.
@@ -163,11 +165,14 @@ func festival(god: String) -> String:
 	return Religion.festival(self, god)
 
 
-## Mission à choix (Athènes) : désigne le dieu protecteur de la cité.
+## Mission à choix (Athènes) : désigne le dieu protecteur de la cité, quand le moment est venu.
 func choose_patron(god: String) -> String:
+	if not needs_patron_choice():
+		return "Le moment de choisir n'est pas venu" if patron == "" else "La cité a déjà choisi son protecteur"
 	var err := Religion.choose_patron(self, god)
 	if err == "":
 		map_version += 1
+		Objectives.check(self)
 	return err
 
 
@@ -181,9 +186,26 @@ func is_available(type: String) -> bool:
 	return only_for == "" or only_for == patron
 
 
-## Vrai tant que le joueur doit encore choisir le protecteur de la cité.
+## Vrai quand le joueur doit choisir le protecteur : la mission en propose un,
+## et l'étape en cours le demande (objectif « patron ») ; sans étapes, dès le début.
 func needs_patron_choice() -> bool:
-	return patron == "" and not Religion.patron_options(self).is_empty()
+	if patron != "" or Religion.patron_options(self).is_empty():
+		return false
+	if Objectives.stages(self).is_empty():
+		return true
+	for o in Objectives.current(self):
+		if o["type"] == "patron":
+			return true
+	return false
+
+
+## L'étape en cours : {"index", "count", "title", "text"}, ou {} pour une mission d'un seul tenant.
+func current_stage() -> Dictionary:
+	var st := Objectives.stages(self)
+	if st.is_empty():
+		return {}
+	var i := mini(stage, st.size() - 1)
+	return {"index": i, "count": st.size(), "title": st[i].get("title", ""), "text": st[i].get("text", "")}
 
 
 func patron_options() -> Array:

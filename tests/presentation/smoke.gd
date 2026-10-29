@@ -22,14 +22,13 @@ func _process(_delta: float) -> bool:
 		main.start_mission(mission)
 	elif step == 3:
 		var g = main.game
-		if g.city.needs_patron_choice():
-			# L'écran de choix : on prend le second prétendant, par son bouton.
-			var buttons: Array = g.hud._modal.find_children("*", "Button", true, false)
-			buttons[buttons.size() - 1].pressed.emit()
-			if g.city.patron == "" or g.speed == 0:
-				printerr("mission %d : le choix du protecteur ne marche pas" % mission)
-				failures += 1
 		g.hud._close_modal()
+		# Mission en étapes avec un jugement : on saute à l'étape du choix, le jeu doit l'afficher.
+		var stages: Array = g.city.mission.get("stages", [])
+		for i in stages.size():
+			for o in stages[i]["objectives"]:
+				if o["type"] == "patron":
+					g.city.stage = i
 		# Sur le plateau de la colline, relevé, la souris doit viser la bonne tuile
 		# (les pentes tournées vers le fond sont en partie cachées par les tuiles de devant).
 		for y in g.city.grid.height:
@@ -44,6 +43,18 @@ func _process(_delta: float) -> bool:
 		g.camera.position = Iso.to_screen(Vector2(12, g.city.entry.y))
 	elif step == 5:
 		var g = main.game
+		if g.city.needs_patron_choice():
+			# L'écran de choix : on prend le second prétendant, par son bouton.
+			if not g.hud.has_modal():
+				printerr("mission %d : l'étape du choix ne s'affiche pas" % mission)
+				failures += 1
+			else:
+				var buttons: Array = g.hud._modal.find_children("*", "Button", true, false)
+				buttons[buttons.size() - 1].pressed.emit()
+			if g.city.patron == "":
+				printerr("mission %d : le choix du protecteur ne marche pas" % mission)
+				failures += 1
+		g.hud._close_modal()
 		g.set_speed(4)
 		var y: int = g.city.entry.y
 		# Une route tracée au glisser puis des maisons.
