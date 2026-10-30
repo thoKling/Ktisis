@@ -9,11 +9,29 @@ La note de conception vit dans le coffre SecondBrain (`Projects/Ktisis.md`).
 
 ## Lancer le jeu
 
-Ouvrir le dossier avec Godot 4.3 et lancer la scène principale (F5), ou :
+### Prérequis
+
+- **Godot 4.3**, version standard (pas la version .NET) : <https://godotengine.org/download/archive/4.3-stable/>. Godot est un seul exécutable, sans installation. Une autre 4.x récente peut marcher, mais le projet est testé en 4.3.
+- **Git**, pour récupérer le dépôt.
+- Pour que les commandes ci-dessous marchent telles quelles, l'exécutable doit être accessible sous le nom `godot` (par exemple un lien `godot` dans le `PATH`). Sinon, remplacer `godot` par son chemin complet, par exemple `"C:\Godot\Godot_v4.3-stable_win64.exe"` sous Windows ou `/Applications/Godot.app/Contents/MacOS/Godot` sous macOS.
+
+### Installation
+
+```
+git clone https://github.com/thoKling/Ktisis.git
+cd Ktisis
+godot --headless --editor --quit --path .   # import des images et polices (première fois, puis après chaque nouvel asset)
+```
+
+L'import crée le dossier `.godot/` (ignoré par Git). Sans lui, le jeu se lance sans ses textures. Ouvrir le projet une fois dans l'éditeur fait la même chose.
+
+### Lancement
 
 ```
 godot --path .
 ```
+
+Ou, avec l'éditeur : lancer Godot, « Importer », choisir `project.godot`, puis F5 pour jouer.
 
 ## Commandes
 
