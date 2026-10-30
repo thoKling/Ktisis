@@ -1,7 +1,7 @@
 # Ktisis
 
 City builder sur la Grèce mythologique, dans l'esprit du *Maître de l'Olympe*, avec un contenu 100 % original.
-Moteur : Godot 4.3 (GDScript), 2D isométrique, PC.
+Moteur : Godot 4.6 (GDScript), 2D isométrique, PC.
 
 ![Iolcos, mission 3](docs/capture_iolcos.png)
 
@@ -11,9 +11,9 @@ La note de conception vit dans le coffre SecondBrain (`Projects/Ktisis.md`).
 
 ### Prérequis
 
-- **Godot 4.3**, version standard (pas la version .NET) : <https://godotengine.org/download/archive/4.3-stable/>. Godot est un seul exécutable, sans installation. Une autre 4.x récente peut marcher, mais le projet est testé en 4.3.
+- **Godot 4.6.1**, version standard (pas la version .NET) : <https://godotengine.org/download/archive/4.6.1-stable/>. Godot est un seul exécutable, sans installation. Le projet est testé en 4.6.1 ; une version plus ancienne ne l'ouvrira pas correctement.
 - **Git**, pour récupérer le dépôt.
-- Pour que les commandes ci-dessous marchent telles quelles, l'exécutable doit être accessible sous le nom `godot` (par exemple un lien `godot` dans le `PATH`). Sinon, remplacer `godot` par son chemin complet, par exemple `"C:\Godot\Godot_v4.3-stable_win64.exe"` sous Windows ou `/Applications/Godot.app/Contents/MacOS/Godot` sous macOS.
+- Pour que les commandes ci-dessous marchent telles quelles, l'exécutable doit être accessible sous le nom `godot` (par exemple un lien `godot` dans le `PATH`). Sinon, remplacer `godot` par son chemin complet, par exemple `"C:\Godot\Godot_v4.6.1-stable_win64.exe"` sous Windows ou `/Applications/Godot.app/Contents/MacOS/Godot` sous macOS.
 
 ### Installation
 
