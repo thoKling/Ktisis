@@ -18,3 +18,10 @@ func test_decorations_and_industry() -> void:
 	check(c.house_beauty(h) < b1, "la carrière enlaidit")
 	c.demolish(Vector2i(12, 8))
 	check(is_equal_approx(c.house_beauty(h), b1), "démolir la carrière rend la beauté")
+
+
+func test_beauty_readable_before_first_step() -> void:
+	var c := Fixtures.flat_city()
+	place_ok(c, "garden", Vector2i(12, 10))
+	check(c.beauty_at(Vector2i(12, 10)) > 0.0, "la beauté d'une case se lit avant le premier pas")
+	check(is_equal_approx(c.beauty_at(Vector2i(0, 0)), 0.0), "case loin du jardin : beauté nulle")

@@ -25,6 +25,13 @@ static func recompute(c) -> void:
 
 
 ## Beauté moyenne sur l'emprise d'un bâtiment.
+## Beauté d'une case ; calcule la carte si elle n'est pas à jour (ex. avant le premier pas).
+static func at(c, p: Vector2i) -> float:
+	if c.beauty_dirty:
+		recompute(c)
+	return c.beauty[c.grid.idx(p)]
+
+
 static func of_building(c, b) -> float:
 	if c.beauty_dirty:
 		recompute(c)

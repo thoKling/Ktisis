@@ -1,0 +1,2 @@
+# Godot écrit ses fichiers en LF, y compris sous Windows
+* text=auto eol=lf

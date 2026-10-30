@@ -241,6 +241,10 @@ func house_beauty(b) -> float:
 	return Beauty.of_building(self, b)
 
 
+func beauty_at(p: Vector2i) -> float:
+	return Beauty.at(self, p)
+
+
 func house_need_met(b, need: String, value = null) -> bool:
 	return Housing.need_met(self, b, need, value)
 

@@ -122,7 +122,7 @@ func _draw_road(p: Vector2i, r: int) -> void:
 func _draw_beauty() -> void:
 	for y in city.grid.height:
 		for x in city.grid.width:
-			var v: float = city.beauty[y * city.grid.width + x]
+			var v: float = city.beauty_at(Vector2i(x, y))
 			if absf(v) < 0.5:
 				continue
 			var col := Color(0.2, 0.9, 0.3, clampf(v / 30.0, 0.0, 0.6)) if v > 0 else Color(0.9, 0.2, 0.2, clampf(-v / 15.0, 0.0, 0.6))

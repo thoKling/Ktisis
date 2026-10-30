@@ -295,7 +295,7 @@ func _hover_text() -> String:
 	var b = city.building_at(hover)
 	if b != null:
 		return BuildingInfo.lines(city, b)[0]
-	return "%s  (beauté %d)" % [TERRAIN_LABELS[city.grid.terrain_at(hover)], int(city.beauty[city.grid.idx(hover)])]
+	return "%s  (beauté %d)" % [TERRAIN_LABELS[city.grid.terrain_at(hover)], int(city.beauty_at(hover))]
 
 
 func selected_building():
