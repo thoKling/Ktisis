@@ -1,6 +1,7 @@
 extends Node
 ## Menu principal et passage d'une mission à l'autre.
 
+const Campaign = preload("res://src/domain/campaign.gd")
 const CatalogLoader = preload("res://src/infrastructure/catalog_loader.gd")
 const FileStore = preload("res://src/infrastructure/file_store.gd")
 const Game = preload("res://src/presentation/game.gd")
@@ -70,7 +71,7 @@ func show_menu() -> void:
 	var open := FileStore.unlocked_missions()
 	for i in missions.size():
 		var b := _menu_button("%d. %s" % [i + 1, missions[i]["title"]], func(): start_mission(i))
-		b.disabled = i >= open
+		b.disabled = not Campaign.is_open(i, open, missions.size())
 		if b.disabled:
 			b.tooltip_text = "Terminez la mission précédente pour la débloquer."
 		box.add_child(b)
@@ -110,5 +111,5 @@ func load_saved() -> void:
 
 
 func _on_won(index: int) -> void:
-	if index + 2 > FileStore.unlocked_missions():
-		FileStore.set_unlocked_missions(mini(index + 2, CatalogLoader.load_catalog().missions.size()))
+	var count: int = CatalogLoader.load_catalog().missions.size()
+	FileStore.set_unlocked_missions(Campaign.unlocked_after_win(index, FileStore.unlocked_missions(), count))
