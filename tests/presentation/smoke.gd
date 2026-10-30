@@ -78,6 +78,26 @@ func _process(_delta: float) -> bool:
 		if g.selected_id == -1:
 			printerr("mission %d : la sélection ne marche pas" % mission)
 			failures += 1
+		# Un clic au centre de la carte porte la caméra au centre de la ville.
+		var mm = g.hud.minimap
+		var at: Vector2 = mm.get_global_rect().get_center()
+		for pressed in [true, false]:
+			var ev := InputEventMouseButton.new()
+			ev.button_index = MOUSE_BUTTON_LEFT
+			ev.pressed = pressed
+			ev.position = at
+			ev.global_position = at
+			root.push_input(ev)
+		var middle := Iso.to_screen(Vector2(g.city.grid.width, g.city.grid.height) * 0.5)
+		if g.camera.position.distance_to(middle) > Iso.TW:
+			printerr("mission %d : la carte ne déplace pas la caméra (%s au lieu de %s)" % [mission, g.camera.position, middle])
+			failures += 1
+		# Une catégorie ouverte remplit la liste du panneau de construction.
+		g.hud._category_buttons["habitat"].pressed.emit()
+		if g.hud._build_rows.is_empty():
+			printerr("mission %d : la catégorie Habitat n'affiche aucun bâtiment" % mission)
+			failures += 1
+		g.hud.clear_build_menu()
 		g.save_game()
 		g.back_to_menu()
 		print("mission %d : %d bâtiments, %d marcheurs, tick %d" % [mission, g.city.buildings.size(), g.city.walkers.size(), g.city.tick])

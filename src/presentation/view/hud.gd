@@ -1,10 +1,12 @@
 extends CanvasLayer
-## Interface de jeu, construite en code : barre du haut, colonne de construction, panneau de mission, chronique.
+## Interface de jeu, construite en code : barre du haut, panneau de construction et carte à droite,
+## panneau de mission à gauche, chronique en bas.
 ## L'habillage (marbre, terre cuite, polices, icônes) vient de ui_theme.gd.
 
 const UiTheme = preload("res://src/presentation/view/ui_theme.gd")
 const Rules = preload("res://src/domain/rules.gd")
 const BuildingInfo = preload("res://src/presentation/building_info.gd")
+const Minimap = preload("res://src/presentation/view/minimap.gd")
 
 const CATEGORY_ICONS := {
 	"routes": "road", "habitat": "house", "alimentation": "wheat", "industrie": "olive",
@@ -14,6 +16,8 @@ const CATEGORY_ICONS := {
 const GOD_ICONS := {"athena": "olive", "poseidon": "drop"}
 const LOG_COLORS := {"good": UiTheme.GOOD, "bad": UiTheme.BAD, "warn": UiTheme.WARN}
 const LOG_LINES := 4
+const SIDE_WIDTH := 350
+const MINIMAP_HEIGHT := 200
 
 var game
 
@@ -27,9 +31,10 @@ var _overlay_button: Button
 var _tool_buttons := {}
 var _category_buttons := {}
 var _open_category := ""
-var _flyout: PanelContainer
-var _flyout_title: Label
-var _flyout_rows: VBoxContainer
+var _list_title: Label
+var _list_hint: Label
+var _build_list: VBoxContainer
+var minimap
 var _build_rows := {}
 var _objectives: VBoxContainer
 var _stage_label: Label
@@ -57,8 +62,8 @@ func _ready() -> void:
 	_root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(_root)
 	_build_top_bar()
-	_build_dock()
-	_build_side()
+	_build_build_panel()
+	_build_mission_panel()
 	_build_log()
 	_build_overlays()
 
@@ -96,20 +101,32 @@ func _build_top_bar() -> void:
 	tools.add_child(_icon_button("menu", "Retour au menu", func(): game.back_to_menu()))
 
 
-func _build_dock() -> void:
-	var dock := PanelContainer.new()
-	dock.position = Vector2(12, 64)
-	_root.add_child(dock)
+## Panneau droit, sur toute la hauteur : outils et catégories, la liste des bâtiments, la carte en bas.
+func _build_build_panel() -> void:
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+	panel.offset_left = -SIDE_WIDTH - 12
+	panel.offset_right = -12
+	panel.offset_top = 64
+	panel.offset_bottom = -12
+	_root.add_child(panel)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
-	dock.add_child(box)
-	_tool_buttons["select"] = _dock_button(box, "cursor", "Sélection (Échap)", func():
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
+	box.add_child(UiTheme.frieze())
+	box.add_child(_section("temple", "Construction"))
+
+	var icons := GridContainer.new()
+	icons.columns = 6
+	icons.add_theme_constant_override("h_separation", 6)
+	icons.add_theme_constant_override("v_separation", 6)
+	box.add_child(icons)
+	_tool_buttons["select"] = _dock_button(icons, "cursor", "Sélection (Échap)", func():
 		game.set_tool("select")
 		clear_build_menu())
-	_tool_buttons["demolish"] = _dock_button(box, "pick", "Démolir (Suppr)", func():
+	_tool_buttons["demolish"] = _dock_button(icons, "pick", "Démolir (Suppr)", func():
 		game.set_tool("demolish")
 		clear_build_menu())
-	box.add_child(HSeparator.new())
 	var defs = game.city.catalog
 	for cat in defs.categories:
 		# Tout ce que la mission propose ; ce qui n'est pas encore permis (le temple d'un dieu non choisi) est filtré à l'ouverture.
@@ -120,30 +137,38 @@ func _build_dock() -> void:
 		if types.is_empty():
 			continue
 		var cat_id: String = cat["id"]
-		var b := _dock_button(box, CATEGORY_ICONS.get(cat_id, "temple"), cat["name"], func(): _toggle_category(cat_id, cat["name"], types))
+		var b := _dock_button(icons, CATEGORY_ICONS.get(cat_id, "temple"), cat["name"], func(): _toggle_category(cat_id, cat["name"], types))
 		_category_buttons[cat_id] = b
 
-	_flyout = PanelContainer.new()
-	_flyout.custom_minimum_size = Vector2(330, 0)
-	_flyout.visible = false
-	_root.add_child(_flyout)
-	var fbox := VBoxContainer.new()
-	fbox.add_theme_constant_override("separation", 4)
-	_flyout.add_child(fbox)
-	fbox.add_child(UiTheme.frieze())
-	_flyout_title = _label("", "Title")
-	fbox.add_child(_flyout_title)
-	_flyout_rows = VBoxContainer.new()
-	_flyout_rows.add_theme_constant_override("separation", 2)
-	fbox.add_child(_flyout_rows)
+	box.add_child(HSeparator.new())
+	_list_title = _label("", "Section")
+	_list_title.visible = false
+	box.add_child(_list_title)
+	_list_hint = _label("Choisissez une catégorie pour voir ses bâtiments.", "Muted")
+	_list_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_list_hint)
+	# La liste prend la place libre et défile si la fenêtre est basse.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	_build_list = VBoxContainer.new()
+	_build_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_build_list.add_theme_constant_override("separation", 2)
+	scroll.add_child(_build_list)
+
+	box.add_child(HSeparator.new())
+	minimap = Minimap.new()
+	minimap.game = game
+	minimap.custom_minimum_size = Vector2(0, MINIMAP_HEIGHT)
+	box.add_child(minimap)
 
 
-func _build_side() -> void:
+## Panneau gauche : la mission, les dieux et la fiche du bâtiment choisi.
+func _build_mission_panel() -> void:
 	var side := PanelContainer.new()
-	side.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	side.offset_left = -362
-	side.offset_right = -12
-	side.offset_top = 64
+	side.position = Vector2(12, 64)
+	side.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
 	_root.add_child(side)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
@@ -280,7 +305,7 @@ func _icon_button(icon: String, tip: String, cb: Callable) -> Button:
 func _dock_button(parent: Control, icon: String, tip: String, cb: Callable) -> Button:
 	var b := _icon_button(icon, tip, cb)
 	b.theme_type_variation = "Dock"
-	b.custom_minimum_size = Vector2(50, 50)
+	b.custom_minimum_size = Vector2(48, 48)
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.toggle_mode = true
 	parent.add_child(b)
@@ -341,25 +366,29 @@ func _toggle_category(cat_id: String, title: String, types: Array) -> void:
 		clear_build_menu()
 		return
 	_open_category = cat_id
-	for c in _flyout_rows.get_children():
-		c.queue_free()
-	_build_rows.clear()
+	_clear_list()
 	for id in types:
 		if not game.city.is_available(id):
 			continue
 		var row := _build_row(id, CATEGORY_ICONS.get(cat_id, "temple"))
 		_build_rows[id] = row
-		_flyout_rows.add_child(row)
-	_flyout_title.text = title
-	var anchor: Button = _category_buttons[cat_id]
-	_flyout.position = Vector2(anchor.global_position.x + anchor.size.x + 22, anchor.global_position.y - 20)
-	_flyout.reset_size()
-	_flyout.visible = true
+		_build_list.add_child(row)
+	_list_title.text = title
+	_list_title.visible = true
+	_list_hint.visible = false
 
 
 func clear_build_menu() -> void:
 	_open_category = ""
-	_flyout.visible = false
+	_clear_list()
+	_list_title.visible = false
+	_list_hint.visible = true
+
+
+func _clear_list() -> void:
+	for c in _build_list.get_children():
+		c.queue_free()
+	_build_rows.clear()
 
 
 # ---------------------------------------------------------------- Mise à jour
