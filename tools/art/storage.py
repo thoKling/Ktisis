@@ -76,9 +76,9 @@ def wheat(cx, cy, lv, rnd):
     """Tas de blé doré qui monte, puis des sacs autour quand le coffre déborde."""
     m = M("ble_tas", color="wheat", noise=0.22, scale=30, bump=0.4)
     r = 0.14 + 0.05 * lv
-    blob(cx, cy, 0.012, r, m, seed=lv, sz=0.03 + 0.035 * lv, lumps=0.15)
+    blob(cx, cy, 0.04, r, m, seed=lv, sz=0.03 + 0.035 * lv, lumps=0.15)
     if lv >= 2:
-        blob(cx - 0.12, cy + 0.08, 0.012, r * 0.55, m, seed=lv + 9, sz=0.02 + 0.02 * lv, lumps=0.15)
+        blob(cx - 0.12, cy + 0.08, 0.035, r * 0.55, m, seed=lv + 9, sz=0.02 + 0.02 * lv, lumps=0.15)
     if lv >= 3:
         sac = M("sac", color="#d8c39a", noise=0.12, bump=0.3)
         for (x, y) in ((cx + 0.22, cy + 0.22), (cx + 0.1, cy + 0.25), (cx + 0.24, cy + 0.08))[: lv - 1]:
@@ -188,10 +188,8 @@ FILL = {"wheat": wheat, "fish": fish, "olives": olives, "oil": oil, "wool": wool
 # --------------------------------------------------------------------------- bâtiments
 
 def _bays(name):
-    before = set(bpy.context.scene.objects)
     for (cx, cy) in BAYS["buildings"][name]:
         BAY[name](cx, cy)
-    _black_outline([o for o in bpy.context.scene.objects if o not in before])
 
 
 def granary():
@@ -256,7 +254,7 @@ BUILDINGS["warehouse"] = (warehouse, 3)
 
 
 def _black_outline(objects):
-    """Contour noir épais autour des cases et de leurs marchandises : elles se détachent de la halle et du sol."""
+    """Contour noir épais autour des marchandises seules : elles ressortent des cases, de la halle et du sol."""
     col = bpy.data.collections.new("marchandises")
     bpy.context.scene.collection.children.link(col)
     for o in objects:
@@ -284,8 +282,8 @@ def goods_jobs():
         for res in resources:
             for lv in range(1, 5):
                 def scene(b=b, res=res, lv=lv):
-                    before = set(bpy.context.scene.objects)
                     BAY[b](0.5, 0.5)
+                    before = set(bpy.context.scene.objects)
                     FILL[res](0.5, 0.5, lv, random.Random(lv))
                     _black_outline([o for o in bpy.context.scene.objects if o not in before])
                 jobs.append(("%s_%s_%d" % (b, res, lv), scene))
