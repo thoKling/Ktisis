@@ -94,6 +94,24 @@ static func terrain_texture(t: int, p: Vector2i) -> Texture2D:
 	return tex if tex != null else texture("terrain", str(t))
 
 
+## Sprite d'un bâtiment dans son état du moment (niveau de maison, étape de chantier) ; null s'il n'y en a pas.
+## Le même sert sur la carte et dans la fiche du panneau gauche.
+static func building_texture(b) -> Texture2D:
+	if b.kind() == "house":
+		if b.pop == 0:
+			var empty := texture("buildings", "house_empty")
+			if empty != null:
+				return empty
+		return texture("buildings", "%s_%d" % [b.type, b.level])
+	if b.kind() == "monument" and not b.complete:
+		var stage := texture("buildings", "%s_s%d" % [b.type, b.stage])
+		if stage == null:
+			stage = texture("buildings", "monument_s%d" % b.stage)
+		if stage != null:
+			return stage
+	return texture("buildings", b.type)
+
+
 static func building_color(def: Dictionary, level: int = 0) -> Color:
 	var c: Color = CATEGORY_COLORS.get(def.get("category", ""), Color.GRAY)
 	if def.get("kind", "") == "house":

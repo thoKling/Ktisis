@@ -1,12 +1,13 @@
 extends CanvasLayer
-## Interface de jeu, construite en code : barre du haut, panneau de construction et carte à droite,
-## panneau de mission à gauche, chronique en bas.
+## Interface de jeu, construite en code : barre du haut ; à droite, sur toute la hauteur, la mission et
+## les dieux, la construction et la carte ; à gauche, la fiche illustrée du bâtiment choisi ; chronique en bas.
 ## L'habillage (marbre, terre cuite, polices, icônes) vient de ui_theme.gd.
 
 const UiTheme = preload("res://src/presentation/view/ui_theme.gd")
 const Rules = preload("res://src/domain/rules.gd")
 const BuildingInfo = preload("res://src/presentation/building_info.gd")
 const Minimap = preload("res://src/presentation/view/minimap.gd")
+const Art = preload("res://src/presentation/view/art.gd")
 
 const CATEGORY_ICONS := {
 	"routes": "road", "habitat": "house", "alimentation": "wheat", "industrie": "olive",
@@ -17,7 +18,8 @@ const GOD_ICONS := {"athena": "olive", "poseidon": "drop"}
 const LOG_COLORS := {"good": UiTheme.GOOD, "bad": UiTheme.BAD, "warn": UiTheme.WARN}
 const LOG_LINES := 4
 const SIDE_WIDTH := 350
-const MINIMAP_HEIGHT := 200
+const MINIMAP_HEIGHT := 170
+const PORTRAIT_HEIGHT := 190
 
 var game
 
@@ -39,9 +41,11 @@ var _build_rows := {}
 var _objectives: VBoxContainer
 var _stage_label: Label
 var _god_rows := {}
+var _info_panel: PanelContainer
 var _info_title: Label
+var _portrait_frame: PanelContainer
+var _portrait: TextureRect
 var _info_grid: GridContainer
-var _info_hint: Label
 var _info_lines := []
 var _log_panel: PanelContainer
 var _log: VBoxContainer
@@ -62,8 +66,8 @@ func _ready() -> void:
 	_root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(_root)
 	_build_top_bar()
-	_build_build_panel()
-	_build_mission_panel()
+	_build_side_panel()
+	_build_info_panel()
 	_build_log()
 	_build_overlays()
 
@@ -101,8 +105,9 @@ func _build_top_bar() -> void:
 	tools.add_child(_icon_button("menu", "Retour au menu", func(): game.back_to_menu()))
 
 
-## Panneau droit, sur toute la hauteur : outils et catégories, la liste des bâtiments, la carte en bas.
-func _build_build_panel() -> void:
+## Panneau droit, sur toute la hauteur : la mission et les dieux en haut, puis les outils et catégories,
+## la liste des bâtiments, la carte en bas.
+func _build_side_panel() -> void:
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	panel.offset_left = -SIDE_WIDTH - 12
@@ -114,6 +119,8 @@ func _build_build_panel() -> void:
 	box.add_theme_constant_override("separation", 8)
 	panel.add_child(box)
 	box.add_child(UiTheme.frieze())
+	_build_mission(box)
+	box.add_child(HSeparator.new())
 	box.add_child(_section("temple", "Construction"))
 
 	var icons := GridContainer.new()
@@ -164,16 +171,8 @@ func _build_build_panel() -> void:
 	box.add_child(minimap)
 
 
-## Panneau gauche : la mission, les dieux et la fiche du bâtiment choisi.
-func _build_mission_panel() -> void:
-	var side := PanelContainer.new()
-	side.position = Vector2(12, 64)
-	side.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
-	_root.add_child(side)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	side.add_child(box)
-	box.add_child(UiTheme.frieze())
+## Haut du panneau droit : le titre de la mission, l'étape, les objectifs, puis les dieux et leurs fêtes.
+func _build_mission(box: VBoxContainer) -> void:
 	var title := _label(game.city.mission.get("title", ""), "Title")
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(title)
@@ -190,13 +189,31 @@ func _build_mission_panel() -> void:
 	for god in game.city.favor:
 		box.add_child(_god_row(god))
 
-	box.add_child(HSeparator.new())
-	_info_title = _label("", "Section")
-	_info_title.visible = false
+
+## Panneau gauche : la fiche du bâtiment choisi, avec son image. Caché tant que rien n'est choisi.
+func _build_info_panel() -> void:
+	_info_panel = PanelContainer.new()
+	_info_panel.position = Vector2(12, 64)
+	_info_panel.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
+	_info_panel.visible = false
+	_root.add_child(_info_panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	_info_panel.add_child(box)
+	box.add_child(UiTheme.frieze())
+	_info_title = _label("", "Title")
+	_info_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_info_title)
-	_info_hint = _label("Cliquez sur un bâtiment pour voir sa fiche.", "Muted")
-	_info_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_info_hint)
+	# L'image du bâtiment, le sprite de la carte posé dans un cadre de marbre.
+	_portrait_frame = PanelContainer.new()
+	_portrait_frame.theme_type_variation = "Card"
+	box.add_child(_portrait_frame)
+	_portrait = TextureRect.new()
+	_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_portrait.custom_minimum_size = Vector2(0, PORTRAIT_HEIGHT)
+	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_portrait_frame.add_child(_portrait)
 	_info_grid = GridContainer.new()
 	_info_grid.columns = 2
 	_info_grid.add_theme_constant_override("h_separation", 12)
@@ -421,6 +438,7 @@ func refresh() -> void:
 		_god_rows[god]["bar"].value = c.favor[god]
 	var b = game.selected_building()
 	_show_info(BuildingInfo.lines(c, b) if b != null else [])
+	_show_portrait(Art.building_texture(b) if b != null else null)
 	_refresh_hover()
 	if _flash_t > 0.0:
 		_flash_t -= get_process_delta_time()
@@ -462,10 +480,11 @@ func _show_info(lines: Array) -> void:
 	if lines == _info_lines:
 		return
 	_info_lines = lines.duplicate()
-	_info_title.visible = not lines.is_empty()
-	_info_hint.visible = lines.is_empty()
+	_info_panel.visible = not lines.is_empty()
 	for ch in _info_grid.get_children():
 		ch.queue_free()
+	# Le panneau reprend la taille de sa nouvelle fiche, plus courte peut-être.
+	_info_panel.reset_size.call_deferred()
 	if lines.is_empty():
 		return
 	_info_title.text = lines[0]
@@ -484,6 +503,13 @@ func _show_info(lines: Array) -> void:
 			l.custom_minimum_size = Vector2(300, 0)
 			_info_grid.add_child(l)
 			_info_grid.add_child(Control.new())
+
+
+## L'image suit l'état du bâtiment (une maison qui monte de niveau, un chantier qui avance).
+func _show_portrait(tex: Texture2D) -> void:
+	if _portrait.texture != tex:
+		_portrait.texture = tex
+	_portrait_frame.visible = tex != null
 
 
 func _refresh_hover() -> void:

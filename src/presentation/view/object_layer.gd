@@ -58,22 +58,6 @@ func _add_props(city, items: Array) -> void:
 				items.append([float(x + y + 2) - 0.5, 2, tex, p])
 
 
-func _building_texture(b) -> Texture2D:
-	if b.kind() == "house":
-		if b.pop == 0:
-			var empty := Art.texture("buildings", "house_empty")
-			if empty != null:
-				return empty
-		return Art.texture("buildings", "%s_%d" % [b.type, b.level])
-	if b.kind() == "monument" and not b.complete:
-		var stage := Art.texture("buildings", "%s_s%d" % [b.type, b.stage])
-		if stage == null:
-			stage = Art.texture("buildings", "monument_s%d" % b.stage)
-		if stage != null:
-			return stage
-	return Art.texture("buildings", b.type)
-
-
 ## Hauteur du haut du bâtiment au-dessus du centre de son emprise (pour les icônes d'alerte).
 func _top_height(b, tex: Texture2D) -> float:
 	if tex == null:
@@ -93,7 +77,7 @@ func _draw_building_flat(b) -> void:
 	var city = game.city
 	var d: Dictionary = b.def
 	var n: float = b.size
-	var tex := _building_texture(b)
+	var tex := Art.building_texture(b)
 	var bottom := Iso.to_screen(Vector2(b.pos) + Vector2(n, n))
 	if tex != null:
 		Art.draw_sprite(self, tex, bottom)

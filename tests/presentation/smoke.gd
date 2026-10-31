@@ -78,6 +78,11 @@ func _process(_delta: float) -> bool:
 		if g.selected_id == -1:
 			printerr("mission %d : la sélection ne marche pas" % mission)
 			failures += 1
+		# Le bâtiment choisi a sa fiche à gauche, avec son image.
+		g.hud.refresh()
+		if not g.hud._info_panel.visible or g.hud._portrait.texture == null:
+			printerr("mission %d : la fiche du bâtiment choisi n'a pas d'image" % mission)
+			failures += 1
 		# Un clic au centre de la carte porte la caméra au centre de la ville.
 		var mm = g.hud.minimap
 		var at: Vector2 = mm.get_global_rect().get_center()
