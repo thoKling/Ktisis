@@ -16,6 +16,8 @@ import random
 
 import bpy
 
+import kit
+
 from buildings import BUILDINGS
 from kit import (M, T, amphora, awning, blob, crate, cyl, dado, ground_pad, opening, pithos, post, prism_roof,
                  rubble_wall, sphere, tbox, _tile_row)
@@ -186,8 +188,10 @@ FILL = {"wheat": wheat, "fish": fish, "olives": olives, "oil": oil, "wool": wool
 # --------------------------------------------------------------------------- bâtiments
 
 def _bays(name):
+    before = set(bpy.context.scene.objects)
     for (cx, cy) in BAYS["buildings"][name]:
         BAY[name](cx, cy)
+    _black_outline([o for o in bpy.context.scene.objects if o not in before])
 
 
 def granary():
@@ -251,6 +255,28 @@ BUILDINGS["granary"] = (granary, 3)
 BUILDINGS["warehouse"] = (warehouse, 3)
 
 
+def _black_outline(objects):
+    """Contour noir épais autour des cases et de leurs marchandises : elles se détachent de la halle et du sol."""
+    col = bpy.data.collections.new("marchandises")
+    bpy.context.scene.collection.children.link(col)
+    for o in objects:
+        for c in list(o.users_collection):
+            c.objects.unlink(o)
+        col.objects.link(o)
+    fs = bpy.context.scene.view_layers[0].freestyle_settings
+    ls = fs.linesets.new("contour_noir")
+    ls.select_by_visibility = True
+    ls.select_by_collection = True
+    ls.collection = col
+    ls.select_silhouette = True
+    ls.select_border = False
+    ls.select_crease = False
+    ls.linestyle = bpy.data.linestyles.new("noir")
+    ls.linestyle.color = (0.04, 0.03, 0.02)
+    ls.linestyle.alpha = 1.0
+    ls.linestyle.thickness = 1.0  # multiplié par l'épaisseur de rendu (0,5 x SCALE) : 2 px en 4x
+
+
 def goods_jobs():
     """(nom, fonction de scène) de chaque case pleine à rendre."""
     jobs = []
@@ -258,7 +284,9 @@ def goods_jobs():
         for res in resources:
             for lv in range(1, 5):
                 def scene(b=b, res=res, lv=lv):
+                    before = set(bpy.context.scene.objects)
                     BAY[b](0.5, 0.5)
                     FILL[res](0.5, 0.5, lv, random.Random(lv))
+                    _black_outline([o for o in bpy.context.scene.objects if o not in before])
                 jobs.append(("%s_%s_%d" % (b, res, lv), scene))
     return jobs
