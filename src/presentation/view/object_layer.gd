@@ -5,6 +5,7 @@ const Iso = preload("res://src/presentation/view/iso.gd")
 const Art = preload("res://src/presentation/view/art.gd")
 const Grid = preload("res://src/domain/world/grid.gd")
 const Rules = preload("res://src/domain/rules.gd")
+const StorageView = preload("res://src/presentation/view/storage_view.gd")
 
 var game
 
@@ -81,6 +82,8 @@ func _draw_building_flat(b) -> void:
 	var bottom := Iso.to_screen(Vector2(b.pos) + Vector2(n, n))
 	if tex != null:
 		Art.draw_sprite(self, tex, bottom)
+		if b.kind() == "storage":
+			_draw_storage_goods(b)
 	else:
 		var h := Art.building_height(b)
 		_draw_box(Vector2(b.pos), n, h, Art.building_color(d, b.level))
@@ -109,6 +112,23 @@ func _draw_building_flat(b) -> void:
 	if b.risk >= 70.0:
 		var c2 := Iso.to_screen(Vector2(b.pos) + Vector2(n, n) * 0.5) - Vector2(-10, _top_height(b, tex) + 12)
 		draw_circle(c2, 5.0, Color("#ff8c1a"))
+
+
+## Marchandises dans les cases du grenier ou de l'entrepôt, de la case du fond à celle de devant.
+func _draw_storage_goods(b) -> void:
+	var centers: Array = StorageView.bays(b.type)
+	if centers.is_empty():
+		return
+	var d: Dictionary = b.def
+	var slots: Array = StorageView.fill(b.stock, d.get("accepts", []), int(d.get("capacity", 0)), centers.size())
+	var order := range(centers.size())
+	order.sort_custom(func(i, j): return centers[i].x + centers[i].y < centers[j].x + centers[j].y)
+	for i in order:
+		if slots[i].is_empty():
+			continue
+		var tex := Art.texture("goods", "%s_%s_%d" % [b.type, slots[i][0], slots[i][1]])
+		if tex != null:
+			Art.draw_sprite(self, tex, Iso.to_screen(Vector2(b.pos) + centers[i] + Vector2(0.5, 0.5)))
 
 
 ## Boîte isométrique : face du dessus claire, faces avant plus sombres (soleil en haut à gauche).

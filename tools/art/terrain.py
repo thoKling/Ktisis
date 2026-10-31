@@ -2,7 +2,7 @@
 
 Les sols sont des motifs périodiques sur K x K tuiles, découpés en K² variantes :
 la tuile (x, y) utilise la variante (x mod K, y mod K), les raccords sont donc invisibles.
-Sorties en 2x (128 x 64), comme les bâtiments.
+Sorties en 4x (256 x 128), comme les bâtiments. Les tailles de traits et de points sont en pixels 2x.
 """
 
 import math
@@ -16,7 +16,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "assets", "terrain")
 K = 4
 HW, HH = 64, 32          # demi-largeur, demi-hauteur d'une tuile en pixels (2x)
-SS = 2                   # suréchantillonnage
+RES = 2                  # sortie : RES fois la taille 2x (donc 4x)
+SS = 4                   # suréchantillonnage du dessin par rapport au 2x (dessin en 8x, réduit en 4x)
 
 
 def rgb(h):
@@ -85,21 +86,22 @@ def to_px(u, v, origin):
 def cut_tiles(img, origin, name, extra=None):
     """Découpe les K² tuiles d'un patch et les enregistre (losange élargi d'1 px pour éviter les joints)."""
     os.makedirs(OUT, exist_ok=True)
-    big = img.resize((img.width // SS, img.height // SS), Image.LANCZOS)
+    big = img.resize((img.width * RES // SS, img.height * RES // SS), Image.LANCZOS)
     mask = diamond_mask()
     for j in range(K):
         for i in range(K):
             px, py = to_px(i, j, origin)
-            x0, y0 = int(round(px / SS)) - HW, int(round(py / SS))
-            tile = big.crop((x0, y0, x0 + 2 * HW, y0 + 2 * HH)).convert("RGBA")
+            x0, y0 = int(round(px * RES / SS)) - HW * RES, int(round(py * RES / SS))
+            tile = big.crop((x0, y0, x0 + 2 * HW * RES, y0 + 2 * HH * RES)).convert("RGBA")
             tile.putalpha(mask)
             tile.save(os.path.join(OUT, "%s_%d.png" % (name, j * K + i)))
 
 
-def diamond_mask(grow=1.2):
-    xs, ys = np.meshgrid(np.arange(2 * HW) + 0.5, np.arange(2 * HH) + 0.5)
-    d = np.abs(xs - HW) / HW + np.abs(ys - HH) / HH
-    a = np.clip((1 + grow / HH - d) * HH, 0, 1)
+def diamond_mask(grow=1.2 * RES):
+    hw, hh = HW * RES, HH * RES
+    xs, ys = np.meshgrid(np.arange(2 * hw) + 0.5, np.arange(2 * hh) + 0.5)
+    d = np.abs(xs - hw) / hw + np.abs(ys - hh) / hh
+    a = np.clip((1 + grow / hh - d) * hh, 0, 1)
     return Image.fromarray((a * 255).astype(np.uint8))
 
 
@@ -248,7 +250,7 @@ def shores():
             col[..., :3] = (c * a + col[..., :3] * col[..., 3:] * (1 - a)) / np.maximum(na, 1e-4)
             col[..., 3:] = na
         col[..., 3] *= inside * 255
-        img = Image.fromarray(col.astype(np.uint8), "RGBA").resize((2 * HW, 2 * HH), Image.LANCZOS)
+        img = Image.fromarray(col.astype(np.uint8), "RGBA").resize((2 * HW * RES, 2 * HH * RES), Image.LANCZOS)
         img.save(os.path.join(OUT, "shore_%d.png" % bit))
 
 
@@ -302,7 +304,7 @@ def roads():
         # Bordure : liseré sombre entre dalles et terre.
         border = region(mask, 0.32) & ~pave & inside
         col[..., :3] = np.where(border[..., None], rgb("#8e7c5c"), col[..., :3])
-        img = Image.fromarray(col.astype(np.uint8), "RGBA").resize((2 * HW, 2 * HH), Image.LANCZOS)
+        img = Image.fromarray(col.astype(np.uint8), "RGBA").resize((2 * HW * RES, 2 * HH * RES), Image.LANCZOS)
         img.save(os.path.join(out, "road_%d.png" % mask))
 
 

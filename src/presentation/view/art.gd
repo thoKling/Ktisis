@@ -55,8 +55,8 @@ const SHORT_LABELS := {
 	"sacred_olive": "Olivier", "salt_spring": "Source",
 }
 
-## Les sprites sont rendus en 2x (voir tools/art) : on les dessine à moitié taille pour rester nets au zoom.
-const SPRITE_SCALE := 0.5
+## Les sprites sont rendus en 4x (voir tools/art) : on les dessine au quart pour rester nets au zoom et sur grand écran.
+const SPRITE_SCALE := 0.25
 ## Nombre de variantes de sol (motif périodique de K x K tuiles).
 const TERRAIN_K := 4
 

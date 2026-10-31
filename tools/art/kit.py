@@ -14,8 +14,9 @@ import bpy
 import bmesh
 from mathutils import Euler, Matrix, Vector
 
-# Rendu en 2x : le jeu dessine les sprites à l'échelle 0,5 pour rester net quand on zoome.
-SCALE = 2
+# Rendu en 4x : le jeu dessine les sprites à l'échelle 0,25 (Art.SPRITE_SCALE), nets jusqu'au zoom maximal
+# et sur les grands écrans ; les mipmaps lissent les vues de loin.
+SCALE = 4
 TILE_W = 64 * SCALE
 PPU = TILE_W / math.sqrt(2.0)  # pixels par unité, horizontalement à l'écran
 
@@ -72,7 +73,7 @@ def reset():
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
-    sc.cycles.samples = 48
+    sc.cycles.samples = 64
     sc.cycles.use_denoising = True
     sc.cycles.max_bounces = 4
     sc.render.film_transparent = True
@@ -97,6 +98,25 @@ def reset():
     sc.collection.objects.link(o)
     light_from = Vector((-1.0, -0.45, 1.25)).normalized()
     o.rotation_euler = light_from.to_track_quat("Z", "Y").to_euler()
+    _outline(sc)
+
+
+def _outline(sc):
+    """Trait brun fin et translucide sur les silhouettes et arêtes vives : un rendu plus dessiné et plus lisible."""
+    sc.render.use_freestyle = True
+    sc.render.line_thickness_mode = "ABSOLUTE"
+    sc.render.line_thickness = 0.5 * SCALE
+    fs = sc.view_layers[0].freestyle_settings
+    ls = fs.linesets[0] if fs.linesets else fs.linesets.new("trait")
+    ls.select_by_visibility = True
+    ls.select_silhouette = True
+    ls.select_border = False
+    ls.select_crease = True
+    fs.crease_angle = math.radians(120.0)
+    ls.linestyle = ls.linestyle or bpy.data.linestyles.new("trait")
+    ls.linestyle.color = (0.2, 0.12, 0.07)
+    ls.linestyle.alpha = 0.5
+    ls.linestyle.thickness = 1.0
 
 
 def render(path, n, height_px=None, crop=True, ground=True, extra_w=0):
@@ -217,7 +237,24 @@ def mat(name, color=None, rough=0.85, noise=0.08, bump=0.0, scale=40.0, kind=Non
             nt.links.new(g.outputs["Result"], comb.inputs[k])
         nt.links.new(ramp.outputs[0], mul.inputs[6])
         nt.links.new(comb.outputs[0], mul.inputs[7])
-        nt.links.new(mul.outputs[2], bsdf.inputs["Base Color"])
+        # Usure : grandes taches douces (enduit refait, salissures), qui cassent les aplats.
+        nz3 = nt.nodes.new("ShaderNodeTexNoise")
+        nz3.inputs["Scale"].default_value = 7.0
+        nz3.inputs["Detail"].default_value = 4.0
+        wr = nt.nodes.new("ShaderNodeValToRGB")
+        wr.color_ramp.elements[0].position = 0.42
+        wr.color_ramp.elements[1].position = 0.58
+        wr.color_ramp.elements[0].color = (1.0, 1.0, 1.0, 1)
+        wr.color_ramp.elements[1].color = (0.8, 0.76, 0.7, 1)
+        nt.links.new(tex.outputs["Object"], nz3.inputs[0])
+        nt.links.new(nz3.outputs["Fac"], wr.inputs[0])
+        mul2 = nt.nodes.new("ShaderNodeMix")
+        mul2.data_type = "RGBA"
+        mul2.blend_type = "MULTIPLY"
+        mul2.inputs["Factor"].default_value = 1.0
+        nt.links.new(mul.outputs[2], mul2.inputs[6])
+        nt.links.new(wr.outputs[0], mul2.inputs[7])
+        nt.links.new(mul2.outputs[2], bsdf.inputs["Base Color"])
     else:
         bsdf.inputs["Base Color"].default_value = base
     if emit > 0:
@@ -385,6 +422,7 @@ def _imbrices(x0, y0, x1, y1, z, rise, along, material):
             _antefix(x, y1, z, ante, "y")
         _tile_row(T(x0, ym, z + rise), T(x1, ym, z + rise), rad * 1.7, material)
         box(x0, -y1 - 0.004, z - 0.04, x1, -y1 + 0.02, z, fascia, bevel=0.003)
+        rafters("y", y1, x0, x1, z)
     else:
         xm = (x0 + x1) / 2
         n = int((y1 - y0) / step)
@@ -396,6 +434,19 @@ def _imbrices(x0, y0, x1, y1, z, rise, along, material):
             _antefix(x1, y, z, ante, "x")
         _tile_row(T(xm, y0, z + rise), T(xm, y1, z + rise), rad * 1.7, material)
         box(x1 - 0.02, -y1, z - 0.04, x1 + 0.004, -y0, z, fascia, bevel=0.003)
+        rafters("x", x1, y0, y1, z)
+
+
+def rafters(face, edge, a0, a1, z, step=0.16):
+    """Abouts de chevrons sous le débord du toit, sur une face visible (repère de la charpente)."""
+    m = M("chevron", color="wood_dark", noise=0.08)
+    n = max(1, int((a1 - a0) / step))
+    for i in range(n + 1):
+        a = a0 + 0.03 + (a1 - a0 - 0.06) * i / max(n, 1)
+        if face == "y":
+            tbox(a - 0.014, edge - 0.09, z - 0.075, a + 0.014, edge - 0.012, z - 0.04, m)
+        else:
+            tbox(edge - 0.09, a - 0.014, z - 0.075, edge - 0.012, a + 0.014, z - 0.04, m)
 
 
 def _antefix(tx, ty, z, material, face):
@@ -437,6 +488,8 @@ def hip_roof(tx0, ty0, tx1, ty1, z, rise, material="terracotta", overhang=0.06):
         f = [(0, 1, 4), (1, 2, 5, 4), (2, 3, 5), (3, 0, 4, 5)]
     m = M(material, color=material, noise=0.12, scale=14) if isinstance(material, str) else material
     mesh(v, f, m)
+    rafters("y", y1, x0, x1, z)
+    rafters("x", x1, y0, y1, z)
     # Lignes de tuiles : petites arêtes parallèles à l'égout, sur chaque pan.
     tm = M("terracotta_dark", color="terracotta_dark", noise=0.05)
     rows = max(2, int(rise / 0.07))
@@ -497,7 +550,18 @@ def ground_pad(n, material="dirt", inset=0.02, h=0.01, seed=0):
     tbox(inset, inset, 0, n - inset, n - inset, h, M(material, color=material, noise=0.18, scale=6))
     tufts(0.05, n - 0.2, n - 0.05, n - 0.04, int(5 * n), seed + n)
     tufts(n - 0.2, 0.05, n - 0.04, n - 0.05, int(5 * n), seed + n + 1)
-    pebbles(0.1, 0.1, n - 0.1, n - 0.1, int(4 * n), seed + n)
+    pebbles(0.1, 0.1, n - 0.1, n - 0.1, int(7 * n), seed + n)
+    # Terre tassée plus sombre par plaques, quelques dalles posées à plat.
+    rnd = random.Random(seed + 31 * n)
+    worn = M(material + "_tasse", color="#a08558" if material == "dirt" else material, noise=0.25, scale=9)
+    for k in range(int(3 * n)):
+        x, y = rnd.uniform(0.3, n - 0.3), rnd.uniform(0.3, n - 0.3)
+        blob(x, y, h - 0.012, rnd.uniform(0.08, 0.16), worn, seed=seed + k, sz=0.014, lumps=0.35)
+    flag = M("dalle", color="#bdb19a", noise=0.12, scale=20)
+    for k in range(int(2 * n)):
+        x, y = rnd.uniform(0.15, n - 0.15), rnd.uniform(0.15, n - 0.15)
+        s_ = rnd.uniform(0.03, 0.05)
+        tbox(x - s_, y - s_ * 0.8, h, x + s_, y + s_ * 0.8, h + 0.006, flag, bevel=0.004)
 
 
 def paving(tx0, ty0, tx1, ty1, z=0.0, h=0.015, material="stone", scale=18):

@@ -4,7 +4,7 @@ Les sprites sont générés par les scripts de `tools/art` (voir son README) : c
 
 ## Conventions
 
-- Vue isométrique 2:1, une tuile = 64 x 32 px **à l'écran**. Les fichiers sont en 2x (tuile de 128 x 64) et dessinés à l'échelle 0,5 (`Art.SPRITE_SCALE`), pour rester nets au zoom.
+- Vue isométrique 2:1, une tuile = 64 x 32 px **à l'écran**. Les fichiers sont en 4x (tuile de 256 x 128) et dessinés à l'échelle 0,25 (`Art.SPRITE_SCALE`), pour rester nets au zoom.
 - Soleil en haut à gauche, ombres vers la droite. Style illustré, pas réaliste, mais détaillé.
 - Palette : marbre `#efe9dc`, terre cuite `#c2673f`, ocre `#d4a24c`, vert olivier `#7d8a3e`, bleu égéen `#2f6f9f`.
 - Pas de texte dans les images.

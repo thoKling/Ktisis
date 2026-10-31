@@ -1,10 +1,10 @@
 extends SceneTree
 ## Lance les suites de tests sans écran :
-##   godot --headless --path . -s res://tests/run.gd                  (domaine puis contenu)
+##   godot --headless --path . -s res://tests/run.gd                  (domaine, présentation puis contenu)
 ##   godot --headless --path . -s res://tests/run.gd -- domain        (un seul dossier)
 ##   godot --headless --path . -s res://tests/run.gd -- domain grid   (suites dont le nom contient « grid »)
 
-const DIRS := ["domain", "content"]
+const DIRS := ["domain", "presentation", "content"]
 
 var failures := 0
 var checks := 0
