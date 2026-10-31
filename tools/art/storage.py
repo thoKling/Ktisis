@@ -272,9 +272,9 @@ def _black_outline(objects):
     ls.select_border = False
     ls.select_crease = False
     ls.linestyle = bpy.data.linestyles.new("noir")
-    ls.linestyle.color = (0.04, 0.03, 0.02)
+    ls.linestyle.color = (0.0, 0.0, 0.0)
     ls.linestyle.alpha = 1.0
-    ls.linestyle.thickness = 1.0  # multiplié par l'épaisseur de rendu (0,5 x SCALE) : 2 px en 4x
+    ls.linestyle.thickness = 2.5  # multiplié par l'épaisseur de rendu (0,5 x SCALE) : 5 px en 4x
 
 
 def goods_jobs():
