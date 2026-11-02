@@ -329,12 +329,12 @@ func back_to_menu() -> void:
 	quit_to_menu.emit()
 
 
-## Le relief dépend aussi des monuments de la colline (leur emprise est aplanie) : refait quand la carte change.
+## Le relief dépend aussi des bâtiments de la colline (leur emprise est aplanie) : refait quand la carte change.
 func _rebuild_relief() -> void:
 	_relief_version = city.map_version
 	var platforms := []
 	for b in city.buildings.values():
-		if b.def.get("on", "") == "hill":
+		if city.grid.terrain_at(b.pos) == Grid.T_HILL:
 			platforms.append([b.pos, b.size])
 	relief = Relief.new(city.grid, platforms)
 	if terrain_layer != null:

@@ -11,7 +11,7 @@ const Grid = preload("res://src/domain/world/grid.gd")
 const Iso = preload("res://src/presentation/view/iso.gd")
 
 ## Hauteur des terrasses de la colline sacrée, du bas vers le sommet.
-const HILL_TIERS := [22.0, 42.0, 60.0]
+const HILL_TIERS := [20.0, 38.0, 54.0]
 const ROCK_STEP := 16.0
 const ROCK_MAX_STEPS := 3
 const CORNER_JITTER := 5.0
@@ -86,15 +86,37 @@ func _tile_heights(grid) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	out.resize(width * height)
 	var rock_d := _distance_inside(grid, Grid.T_ROCK)
-	var hill_d := _distance_inside(grid, Grid.T_HILL)
+	var hill_e := _round_distance_inside(grid, Grid.T_HILL)
 	for y in height:
 		for x in width:
 			var i := y * width + x
 			var t: int = grid.terrain_at(Vector2i(x, y))
 			if t == Grid.T_HILL:
-				out[i] = HILL_TIERS[mini((hill_d[i] - 1) / 2, HILL_TIERS.size() - 1)]
+				# Distance euclidienne au bord (et non en cases) : des terrasses aux contours arrondis.
+				out[i] = HILL_TIERS[clampi(int((hill_e[i] - 0.5) / 2.0), 0, HILL_TIERS.size() - 1)]
 			elif t == Grid.T_ROCK:
 				out[i] = ROCK_STEP * mini(rock_d[i], ROCK_MAX_STEPS)
+	return out
+
+
+## Pour chaque tuile du terrain `kind`, distance euclidienne (en tuiles) entre son centre et le centre de la
+## plus proche tuile d'un autre terrain (1 au bord) ; 0 pour les autres tuiles. Recherche bornée à 8 tuiles.
+func _round_distance_inside(grid, kind: int) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(width * height)
+	const R := 8
+	for y in height:
+		for x in width:
+			if grid.terrain_at(Vector2i(x, y)) != kind:
+				continue
+			var best := float(R + 1)
+			for dy in range(-R, R + 1):
+				for dx in range(-R, R + 1):
+					var q := Vector2i(x + dx, y + dy)
+					var other: bool = q.x < 0 or q.y < 0 or q.x >= width or q.y >= height or grid.terrain_at(q) != kind
+					if other:
+						best = minf(best, Vector2(dx, dy).length())
+			out[y * width + x] = best
 	return out
 
 

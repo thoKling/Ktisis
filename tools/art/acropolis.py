@@ -87,29 +87,72 @@ for _s in range(2):
 BUILDINGS["propylaea"] = (lambda: _propylaea(2), 3)
 
 
-# --------------------------------------------------------------------------- Grands temples (4x4)
+# --------------------------------------------------------------------------- Grands temples (5x5)
+
+TEMPLE_N = 5
+
+
+def _pediment_figures(x0, x1, y, z, rise, material, seed=0):
+    """Groupe sculpté du fronton : figures de plus en plus petites vers les angles, dieu au centre."""
+    rnd = random.Random(seed)
+    cx = (x0 + x1) / 2
+    half = (x1 - x0) / 2
+    for k in range(-4, 5):
+        t = k / 4.6
+        x = cx + t * half * 0.92
+        room = rise * (1 - abs(t)) * 0.8
+        if room < 0.06:
+            continue
+        s = room / 0.27
+        statue(x, y, z, s=s, material=material, pose=0 if k == 0 else rnd.randint(0, 1))
+
+
+def _tripod(x, y, z, s=1.0):
+    """Trépied de bronze doré : trois pieds fins et un grand bassin."""
+    gold = M("gold", color="gold", rough=0.35)
+    for d in ((-0.04, -0.03), (0.04, -0.03), (0.0, 0.045)):
+        cyl(x + d[0] * s, y + d[1] * s, z, z + 0.26 * s, 0.006 * s, gold, verts=5)
+    sphere(x, y, z + 0.28 * s, 0.07 * s, gold, sz=0.035 * s)
+
+
+def _colossus(x, y, z, s, material, spear=True):
+    """Statue colossale debout : long drapé, torse, tête casquée, lance et bouclier rond."""
+    m = M(material, color={"bronze": "#b08440"}.get(material, material), rough=0.35, noise=0.03)
+    cyl(x, y, z, z + 0.2 * s, 0.05 * s, m, verts=12, r_top=0.035 * s)
+    cyl(x, y, z + 0.2 * s, z + 0.3 * s, 0.035 * s, m, verts=12, r_top=0.028 * s)
+    sphere(x, y, z + 0.33 * s, 0.024 * s, m)
+    cyl(x, y, z + 0.35 * s, z + 0.39 * s, 0.012 * s, m, verts=8, r_top=0.002 * s)
+    if spear:
+        cyl(x + 0.045 * s, y, z + 0.05 * s, z + 0.5 * s, 0.006 * s, m, verts=6)
+    cyl(x - 0.045 * s, y + 0.01 * s, z + 0.12 * s, z + 0.125 * s, 0.05 * s, m, verts=14)
+
 
 def _great_temple(stage, god):
-    """Grand temple périptère de l'Acropole : huit colonnes en façade, frise peinte, statue colossale du dieu.
+    """Grand temple périptère de l'Acropole, sur 5 x 5 tuiles : huit colonnes en façade et dix-sept sur les
+    côtés, double portique d'entrée, frise peinte et boucliers dorés, fronton sculpté, acrotères d'or,
+    parvis dallé avec autel, trépieds et statue colossale du dieu.
 
-    stage 0-2 : chantier ; 3 : achevé. Athéna : Parthénon dorique, Athéna Promachos dorée et son olivier.
-    Poséidon : frise bleue, trident de bronze, bassin d'eau de mer et chevaux.
+    stage 0-2 : chantier ; 3 : achevé. Athéna : Parthénon, Athéna Promachos dorée, olivier et chouette.
+    Poséidon : frise bleue, toit de marbre, trident de bronze, bassin d'eau de mer et chevaux.
     """
+    n = TEMPLE_N
     frieze = "cloth_red" if god == "athena" else "aegean"
-    _rock_pad(4, seed=7 if god == "athena" else 9)
-    x0, y0, x1, y1 = 0.25, 0.2, 3.0, 3.75
-    z = steps(x0 - 0.12, y0 - 0.12, x1 + 0.12, y1 + 0.12, 0.012, n=3, rise=0.06, inset=0.05)
-    hcol = 1.0
+    _rock_pad(n, seed=7 if god == "athena" else 9)
+    x0, y0, x1, y1 = 0.35, 0.3, 3.45, 4.05
+    # Haut soubassement (crépis à trois degrés) qui le met au-dessus de tout le reste.
+    z = steps(x0 - 0.18, y0 - 0.18, x1 + 0.18, y1 + 0.18, 0.012, n=3, rise=0.075, inset=0.06)
+    hcol = 1.3
     if stage == 0:
-        _blocks(3.1, 0.3, 9, seed=3)
-        _crane(1.6, 2.0, 0.9)
+        _blocks(3.85, 0.35, 9, seed=3)
+        _blocks(3.85, 1.4, 6, seed=5)
+        _crane(1.9, 2.2, 1.0)
         tbox(x0 + 0.1, y0 + 0.1, z, x1 - 0.1, y1 - 0.1, z + 0.05, M("marble"))
         return
-    n_front, n_side = 8, 12
+    n_front, n_side = 8, 17
     frac = 0.5 if stage == 1 else 1.0
     h = hcol * frac
     cella = M("marble_mur", color="marble", kind="brick", scale=20)
-    tbox(x0 + 0.42, y0 + 0.5, z, x1 - 0.42, y1 - 0.5, z + h, cella)
+    tbox(x0 + 0.5, y0 + 0.55, z, x1 - 0.5, y1 - 0.9, z + h, cella)
     for i in range(n_front):
         t = i / (n_front - 1)
         for yy in (y0 + 0.1, y1 - 0.1):
@@ -118,65 +161,100 @@ def _great_temple(stage, god):
         t = i / (n_side - 1)
         for xx in (x0 + 0.1, x1 - 0.1):
             _col(xx, y0 + 0.1 + (y1 - y0 - 0.2) * t, z, h, frac)
+    # Pronaos : seconde rangée de six colonnes derrière la façade, devant la porte de la cella.
+    for i in range(6):
+        t = i / 5
+        _col(x0 + 0.55 + (x1 - x0 - 1.1) * t, y1 - 0.55, z, h, frac)
     if stage == 1:
-        _crane(x1 + 0.4, y1 - 0.5, 1.3)
-        _blocks(3.2, 0.4, 6, seed=4)
+        _crane(x1 + 0.55, y1 - 0.6, 1.5)
+        _blocks(3.9, 0.4, 6, seed=4)
         return
-    entablature(x0, y0, x1, y1, z + hcol, h=0.22, frieze=frieze)
+    zt = z + hcol
+    entablature(x0, y0, x1, y1, zt, h=0.26, frieze=frieze)
     if stage == 2:
-        _scaffold(x1 + 0.2, y1 + 0.05, 1.5)
-        for i in range(10):
-            y = y0 + (y1 - y0) * i / 9
-            tbox(x0, y - 0.02, z + hcol + 0.22, x1, y + 0.02, z + hcol + 0.26, M("wood"))
+        _scaffold(x1 + 0.3, y1 + 0.1, 1.8)
+        for i in range(12):
+            y = y0 + (y1 - y0) * i / 11
+            tbox(x0, y - 0.02, zt + 0.26, x1, y + 0.02, zt + 0.3, M("wood"))
         return
-    if god == "athena":
-        prism_roof(x0, y0, x1, y1, z + hcol + 0.22, 0.46, along="y", pediment=M("marble_shade", color="marble_shade"),
-                   overhang=0.05)
-    else:
-        # Le temple du dieu des mers : toit de tuiles de marbre, comme taillé dans l'écume.
-        prism_roof(x0, y0, x1, y1, z + hcol + 0.22, 0.46, along="y", pediment=M("marble_shade", color="marble_shade"),
-                   overhang=0.05, tile_mat=M("tuiles_marbre", color="#e4ddd0", noise=0.06, scale=12),
-                   material=M("toit_marbre", color="#d9d0bd", noise=0.05))
-    # Fronton peint : bande colorée sous le toit, acrotères dorés.
-    tbox(x0 + 0.1, y1 + 0.03, z + hcol + 0.24, x1 - 0.1, y1 + 0.05, z + hcol + 0.3, M(frieze, color=frieze))
     gold = M("gold", color="gold", rough=0.35)
-    for y in (y0, y1):
-        sphere((x0 + x1) / 2, y, z + hcol + 0.72, 0.06, gold)
-    # Autel des sacrifices devant la façade.
-    tbox(3.25, 3.1, 0.012, 3.8, 3.55, 0.24, M("marble"), bevel=0.01)
-    tbox(3.23, 3.08, 0.24, 3.82, 3.57, 0.28, M(frieze, color=frieze))
-    fire(3.52, 3.32, 0.28, s=2.2)
+    # Boucliers dorés accrochés à l'architrave, sous chaque entrecolonnement de la façade et du flanc visible.
+    for i in range(n_front - 1):
+        x = x0 + 0.1 + (x1 - x0 - 0.2) * (i + 0.5) / (n_front - 1)
+        cyl(x, y1 + 0.012, zt + 0.05, zt + 0.051, 0.035, gold, verts=12)
+        sphere(x, y1 + 0.012, zt + 0.055, 0.03, gold, sz=0.012)
+    for i in range(0, n_side - 1, 2):
+        y = y0 + 0.1 + (y1 - y0 - 0.2) * (i + 0.5) / (n_side - 1)
+        sphere(x1 + 0.012, y, zt + 0.055, 0.03, gold, sz=0.03)
+    rise = 0.6
+    zr = zt + 0.26
     if god == "athena":
-        # Athéna Promachos, de bronze doré, lance levée ; l'olivier et la chouette.
-        tbox(3.3, 1.0, 0.012, 3.7, 1.4, 0.32, M("marble"), bevel=0.01)
-        statue(3.5, 1.2, 0.32, s=3.2, pose=0, material="gold")
-        olive_tree(3.55, 2.2, 0.012, s=2.0, seed=8)
-        sphere(3.5, 0.45, 0.32, 0.04, M("chouette", color="#8a7a5c", noise=0.1), sz=0.05)
-        tbox(3.42, 0.37, 0.012, 3.58, 0.53, 0.28, M("marble"))
+        prism_roof(x0, y0, x1, y1, zr, rise, along="y", pediment=M("fronton_bleu", color="#5b7fa6", noise=0.03),
+                   overhang=0.06)
     else:
-        # Trident de bronze colossal, bassin d'eau de mer, deux chevaux de marbre.
+        prism_roof(x0, y0, x1, y1, zr, rise, along="y", pediment=M("fronton_bleu", color="#4f86a8", noise=0.03),
+                   overhang=0.06, tile_mat=M("tuiles_marbre", color="#e4ddd0", noise=0.06, scale=12),
+                   material=M("toit_marbre", color="#d9d0bd", noise=0.05))
+    # Fronton sculpté : figures de marbre sur fond bleu, sous une corniche rouge ou bleue.
+    _pediment_figures(x0 + 0.1, x1 - 0.1, y1 + 0.03, zr, rise, "marble", seed=11 if god == "athena" else 13)
+    tbox(x0 - 0.03, y1 + 0.04, zr - 0.02, x1 + 0.03, y1 + 0.07, zr + 0.02, M(frieze, color=frieze))
+    # Acrotères d'or : au faîte et aux quatre angles.
+    for y in (y0 - 0.04, y1 + 0.04):
+        sphere((x0 + x1) / 2, y, zr + rise + 0.07, 0.07, gold)
+        for x in (x0 + 0.02, x1 - 0.02):
+            cyl(x, y, zr, zr + 0.1, 0.035, gold, verts=6, r_top=0.005)
+    # Parvis dallé devant la façade, avec un escalier central.
+    paving(x0 - 0.2, y1 + 0.25, x1 + 0.2, n - 0.08, z=0.012)
+    steps(x0 + 1.1, y1 + 0.12, x1 - 1.1, y1 + 0.35, 0.012, n=3, rise=0.07, inset=0.0)
+    for x in (x0 + 0.4, x1 - 0.4):
+        _tripod(x, y1 + 0.55, 0.03, s=1.8)
+    # Autel des sacrifices à droite du parvis.
+    ax, ay = 4.15, 4.25
+    tbox(ax - 0.35, ay - 0.25, 0.012, ax + 0.35, ay + 0.25, 0.26, M("marble"), bevel=0.01)
+    tbox(ax - 0.37, ay - 0.27, 0.26, ax + 0.37, ay + 0.27, 0.3, M(frieze, color=frieze))
+    fire(ax, ay, 0.3, s=2.4)
+    if god == "athena":
+        # Athéna Promachos, de bronze doré, lance levée, sur un haut piédestal ; l'olivier et la chouette.
+        tbox(4.0, 1.2, 0.012, 4.4, 1.6, 0.42, M("marble"), bevel=0.01)
+        tbox(3.98, 1.18, 0.38, 4.42, 1.62, 0.42, M(frieze, color=frieze))
+        _colossus(4.2, 1.4, 0.42, 3.0, "gold")
+        olive_tree(4.3, 2.75, 0.012, s=2.3, seed=8)
+        tbox(4.15, 0.35, 0.012, 4.35, 0.55, 0.3, M("marble"))
+        sphere(4.25, 0.45, 0.34, 0.045, M("chouette", color="#8a7a5c", noise=0.1), sz=0.055)
+    else:
         bronze = M("bronze", color="#b08440", rough=0.35)
-        tbox(3.3, 1.0, 0.012, 3.7, 1.4, 0.25, M("marble"), bevel=0.01)
-        cyl(3.5, 1.2, 0.25, 1.35, 0.02, bronze, verts=8)
-        tbox(3.4, 1.18, 1.2, 3.6, 1.22, 1.24, bronze)
-        for d in (-0.1, 0.0, 0.1):
-            cyl(3.5 + d, 1.2, 1.22, 1.45 if d == 0 else 1.38, 0.012, bronze, verts=6, r_top=0.003)
-        tbox(3.15, 1.85, 0.012, 3.85, 2.75, 0.08, M("marble"))
-        water_surface(3.2, 1.9, 3.8, 2.7, 0.075)
-        for k, y in enumerate((0.3, 0.7)):
+        tbox(3.95, 1.15, 0.012, 4.45, 1.65, 0.35, M("marble"), bevel=0.01)
+        cyl(4.2, 1.4, 0.35, 1.75, 0.025, bronze, verts=8)
+        tbox(4.08, 1.38, 1.6, 4.32, 1.42, 1.64, bronze)
+        for d in (-0.12, 0.0, 0.12):
+            cyl(4.2 + d, 1.4, 1.62, 1.9 if d == 0 else 1.8, 0.014, bronze, verts=6, r_top=0.003)
+        # Bassin d'eau de mer : margelle de marbre et eau bleue, une statue du dieu au milieu.
+        rim = M("marble")
+        tbox(3.8, 2.2, 0.012, 4.75, 3.4, 0.03, M("fond_bassin", color="#2f6f93"))
+        for (a, b, c_, d) in ((3.8, 2.2, 4.75, 2.28), (3.8, 3.32, 4.75, 3.4), (3.8, 2.2, 3.88, 3.4), (4.67, 2.2, 4.75, 3.4)):
+            tbox(a, b, 0.012, c_, d, 0.13, rim, bevel=0.008)
+        water_surface(3.88, 2.28, 4.67, 3.32, 0.1)
+        tbox(4.18, 2.7, 0.012, 4.38, 2.9, 0.18, rim)
+        _colossus(4.28, 2.8, 0.18, 1.6, "bronze", spear=False)
+        # Deux chevaux marins de marbre, cabrés, sur leurs socles.
+        for y in (0.35, 0.8):
             m = M("cheval", color="marble", noise=0.03)
-            tbox(3.35, y, 0.012, 3.7, y + 0.12, 0.1, m)
-            tbox(3.38, y + 0.01, 0.1, 3.62, y + 0.11, 0.2, m)
-            tbox(3.58, y + 0.02, 0.2, 3.68, y + 0.1, 0.32, m)
-    cypress(0.12, 3.9, h=0.9, seed=5)
-    for k in range(4):
-        bush(0.6 + k * 0.5, 3.92, 0.012, 1.0, seed=k, color="leaf_olive")
+            tbox(3.98, y - 0.02, 0.012, 4.47, y + 0.17, 0.1, M("marble_shade", color="marble_shade"))
+            tbox(4.02, y + 0.01, 0.1, 4.38, y + 0.14, 0.24, m, bevel=0.02)
+            tbox(4.28, y + 0.03, 0.22, 4.4, y + 0.12, 0.42, m, bevel=0.015)
+            tbox(4.33, y + 0.04, 0.38, 4.5, y + 0.11, 0.46, m, bevel=0.01)
+            for lx in (4.08, 4.32):
+                cyl(lx, y + 0.075, 0.1, 0.1 + 0.001, 0.02, m, verts=6)
+    cypress(0.12, 0.15, h=1.0, seed=5)
+    cypress(4.85, 0.15, h=0.9, seed=6)
+    for k in range(3):
+        bush(0.15, 1.2 + k * 1.1, 0.012, 1.1, seed=k, color="leaf_olive")
 
 
 for _god, _id in (("athena", "parthenon"), ("poseidon", "temple_poseidon")):
     for _s in range(3):
-        BUILDINGS["%s_s%d" % (_id, _s)] = ((lambda s, g: lambda: _great_temple(s, g))(_s, _god), 4)
-    BUILDINGS[_id] = ((lambda g: lambda: _great_temple(3, g))(_god), 4)
+        BUILDINGS["%s_s%d" % (_id, _s)] = ((lambda s, g: lambda: _great_temple(s, g))(_s, _god), TEMPLE_N)
+    BUILDINGS[_id] = ((lambda g: lambda: _great_temple(3, g))(_god), TEMPLE_N)
 
 
 # --------------------------------------------------------------------------- Présents des dieux (2x2)

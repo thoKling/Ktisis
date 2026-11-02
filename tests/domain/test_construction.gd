@@ -59,10 +59,28 @@ func test_building_must_be_in_the_mission() -> void:
 
 func test_the_sacred_hill_takes_only_its_monuments() -> void:
 	var c := Fixtures.contested_city()
-	eq(c.place("house", Vector2i(21, 8)), "La colline sacrée est réservée à ses monuments", "pas de maison sur la colline")
+	eq(c.place("house", Vector2i(21, 8)), "La colline sacrée est réservée à ses monuments et à ses jardins", "pas de maison sur la colline")
 	eq(c.place("gate", Vector2i(10, 10)), "Se bâtit sur la colline sacrée", "pas de Propylées en plaine")
 	eq(c.place("gate", Vector2i(19, 8)), "Se bâtit sur la colline sacrée", "à cheval sur le bord")
 	place_ok(c, "road", Vector2i(20, 8))
 	place_ok(c, "gate", Vector2i(21, 8))
 	c.choose_patron("athena")
 	place_ok(c, "temple_athena", Vector2i(23, 9))
+
+
+func test_gardens_adorn_the_sacred_hill() -> void:
+	var c := Fixtures.contested_city()
+	place_ok(c, "garden", Vector2i(22, 6))
+	check(c.beauty_at(Vector2i(22, 6)) > 0.0, "le jardin embellit la colline")
+
+
+func test_a_mission_can_lock_a_building_until_a_stage() -> void:
+	var stages := [
+		{"title": "Fonder", "text": "", "objectives": [{"type": "money", "value": 1}]},
+		{"title": "Embellir", "text": "", "objectives": [{"type": "money", "value": 10000000}]},
+		{"title": "Le temple", "text": "", "objectives": [{"type": "money", "value": 10000000}]}]
+	var c := Fixtures.contested_city({"stages": stages, "locked_until": {"gate": 2}})
+	place_ok(c, "road", Vector2i(20, 8))
+	eq(c.place("gate", Vector2i(21, 8)), "Disponible à l'étape « Le temple »", "porte verrouillée")
+	c.stage = 2
+	place_ok(c, "gate", Vector2i(21, 8))

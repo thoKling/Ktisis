@@ -64,3 +64,15 @@ func test_missions_without_stages_choose_at_once() -> void:
 	var c := Fixtures.contested_city()
 	eq(c.current_stage(), {}, "pas d'étapes")
 	check(c.needs_patron_choice(), "le choix se fait dès le début")
+
+
+func test_terrain_beauty_objective() -> void:
+	var c := Fixtures.contested_city({"objectives": [
+		{"type": "terrain_beauty", "terrain": "hill", "label": "Terrasses", "value": 3}]})
+	var o: Dictionary = c.objectives()[0]
+	eq(o["text"], "Terrasses : beauté 0 / 3", "colline nue")
+	check(not o["done"], "pas encore")
+	for x in range(20, 30, 3):
+		for y in range(5, 13, 3):
+			place_ok(c, "garden", Vector2i(x, y))
+	check(c.objectives()[0]["done"], "terrasses embellies")

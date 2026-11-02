@@ -20,6 +20,9 @@ static func can_place(c, type: String, p: Vector2i) -> String:
 		for r in d["cost_res"]:
 			if Logistics.stored_total(c, r) < d["cost_res"][r]:
 				return "Il faut %d %s en entrepôt" % [d["cost_res"][r], c.catalog.resource_name(r)]
+	var lock := locked_reason(c, type)
+	if lock != "":
+		return lock
 	var g = c.grid
 	if d["kind"] == "roadblock":
 		if g.road_at(p) != Grid.R_ROAD:
@@ -36,8 +39,9 @@ static func can_place(c, type: String, p: Vector2i) -> String:
 			var hill: bool = g.terrain_at(q) == Grid.T_HILL
 			if on_hill and not hill:
 				return "Se bâtit sur la colline sacrée"
-			if hill and not on_hill and d["kind"] != "road":
-				return "La colline sacrée est réservée à ses monuments"
+			# Sur les terrasses de la colline sacrée : routes, monuments, et ce qui l'embellit (jardins, statues...).
+			if hill and not on_hill and d["kind"] != "road" and d["kind"] != "deco":
+				return "La colline sacrée est réservée à ses monuments et à ses jardins"
 			if not hill and not g.is_buildable(q):
 				return "Terrain impraticable"
 			if g.occupant(q) != -1:
@@ -55,6 +59,19 @@ static func can_place(c, type: String, p: Vector2i) -> String:
 		if not g.touches_terrain(p, s, t_near, int(d.get("near_radius", 2))):
 			return "Doit être près d'une forêt" if d["near"] == "forest" else "Doit être près d'un rocher"
 	return ""
+
+
+## Une mission peut réserver un bâtiment à une étape : "locked_until": {"<id>": <index de l'étape>}.
+## Raison du refus tant que la cité n'y est pas arrivée, sinon "".
+static func locked_reason(c, type: String) -> String:
+	var locks: Dictionary = c.mission.get("locked_until", {})
+	if not locks.has(type) or c.stage >= int(locks[type]):
+		return ""
+	var st: Array = c.mission.get("stages", [])
+	var i := int(locks[type])
+	if i < st.size():
+		return "Disponible à l'étape « %s »" % st[i]["title"]
+	return "Pas encore disponible"
 
 
 static func place(c, type: String, p: Vector2i) -> String:

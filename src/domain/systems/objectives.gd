@@ -5,6 +5,7 @@ extends RefCounted
 
 const Housing = preload("res://src/domain/systems/housing.gd")
 const Monuments = preload("res://src/domain/systems/monuments.gd")
+const Grid = preload("res://src/domain/world/grid.gd")
 
 
 ## Les étapes de la mission : [{"title", "text", "objectives"}], vide pour une mission d'un seul tenant.
@@ -67,11 +68,31 @@ static func evaluate(c) -> Array:
 				var f: float = c.favor.get(o["god"], 0.0)
 				done = f >= float(o["value"])
 				text = "Faveur %s : %d / %d" % [c.catalog.god_of(o["god"]), int(f), int(o["value"])]
+			"terrain_beauty":
+				# Beauté moyenne d'un terrain (les terrasses de la colline sacrée, par exemple).
+				var kind: int = Grid.TERRAIN_NAMES[o["terrain"]]
+				var v := terrain_beauty(c, kind)
+				done = v >= float(o["value"])
+				text = "%s : beauté %d / %d" % [o.get("label", "Beauté"), int(v), int(o["value"])]
 			"money":
 				done = c.money >= int(o["value"])
 				text = "Trésor : %d / %d" % [c.money, int(o["value"])]
 		res.append({"text": text, "done": done})
 	return res
+
+
+## Beauté moyenne des cases d'un terrain (0 s'il n'y en a pas).
+static func terrain_beauty(c, kind: int) -> float:
+	var g = c.grid
+	var total := 0.0
+	var n := 0
+	for y in g.height:
+		for x in g.width:
+			var p := Vector2i(x, y)
+			if g.terrain_at(p) == kind:
+				total += c.beauty_at(p)
+				n += 1
+	return total / n if n > 0 else 0.0
 
 
 static func _patron_monument(c) -> String:

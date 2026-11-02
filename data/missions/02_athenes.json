@@ -7,8 +7,8 @@
     "D'abord, faites de ce village une ville : des maisons, du pain, de l'eau."
   ],
   "tips": [
-    "La mission se joue en quatre étapes : le choix du dieu protecteur vient à la troisième.",
-    "La colline sacrée, au centre, ne reçoit que les routes et les monuments de l'Acropole. On y monte par le sud, face à la ville.",
+    "La mission se joue en cinq étapes : le choix du dieu protecteur vient à la troisième, puis il faut embellir les terrasses de la colline avant d'y bâtir son temple.",
+    "La colline sacrée, au centre, ne reçoit que les routes, ses monuments et ce qui l'embellit (jardins, places, statues). On y monte par le sud, face à la ville.",
     "Le marbre vient des carrières du Pentélique, au nord-est ; le bois, des forêts du Parnès et de l'Hymette.",
     "Les oliveraies veulent la plaine fertile du Céphise, à l'ouest ; les quais de pêche, la baie du Pirée et de Phalère."
   ],
@@ -272,7 +272,7 @@
   ],
   "patron_choice": {
     "gift_at": [
-      35,
+      28,
       27
     ],
     "patron_favor": 60,
@@ -366,8 +366,20 @@
       ]
     },
     {
+      "title": "Les terrasses sacrées",
+      "text": "Le protecteur est choisi, mais la colline n'est encore qu'un rocher nu. Avant d'y élever le temple, aménagez ses terrasses : jardins, places et statues, pour que la demeure du dieu soit digne de lui.",
+      "objectives": [
+        {
+          "type": "terrain_beauty",
+          "terrain": "hill",
+          "label": "Terrasses de la colline sacrée",
+          "value": 22
+        }
+      ]
+    },
+    {
       "title": "L'Acropole",
-      "text": "Le protecteur est choisi. Bâtissez-lui son temple sur la colline sacrée, faites d'Athènes une grande ville, et apaisez le dieu éconduit avant que sa colère n'éclate.",
+      "text": "Les terrasses sont prêtes. Bâtissez au protecteur son temple sur la colline sacrée, faites d'Athènes une grande ville, et apaisez le dieu éconduit avant que sa colère n'éclate.",
       "objectives": [
         {
           "type": "patron_monument"
@@ -387,5 +399,9 @@
         }
       ]
     }
-  ]
+  ],
+  "locked_until": {
+    "parthenon": 4,
+    "temple_poseidon": 4
+  }
 }

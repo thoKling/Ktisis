@@ -10,6 +10,7 @@ const SLOPE_SUBDIV := 4
 ## Une tuile de rivage est dessinée en COAST_SUBDIV x COAST_SUBDIV quads.
 const COAST_SUBDIV := 6
 const SAND := Color("#d9c48f")
+const SACRED_WAY := Color(0.86, 0.66, 0.5)
 const FOAM := Color("#eef4f2")
 const SHALLOW := Color("#79b9cc")
 
@@ -54,6 +55,9 @@ func _draw_tile(p: Vector2i) -> void:
 	base = base.darkened(fposmod(h, 1.0) * 0.06)
 	var poly: PackedVector2Array = relief.diamond(Vector2(p))
 	var tex := Art.terrain_texture(t, p)
+	if t == Grid.T_HILL and not _level(p):
+		# Les flancs de la colline sont des falaises de calcaire : seul le plateau est lisse.
+		tex = Art.terrain_texture(Grid.T_ROCK, p)
 	var coast: bool = tex != null and _is_coast(p) and relief.is_flat_tile(p)
 	if coast:
 		# Sans le losange élargi des textures : il déborderait sur la tuile voisine, de l'autre nature.
@@ -79,10 +83,15 @@ func _draw_tile(p: Vector2i) -> void:
 		_draw_road(p, r)
 
 
+func _level(p: Vector2i) -> bool:
+	var h: float = relief.corner(p.x, p.y)
+	return relief.corner(p.x + 1, p.y) == h and relief.corner(p.x, p.y + 1) == h and relief.corner(p.x + 1, p.y + 1) == h
+
+
 ## Une texture de sol (ou de route) posée sur la tuile p : à plat, ou épousant le relief.
-func _draw_ground(tex: Texture2D, p: Vector2i, soft_base := false) -> void:
+func _draw_ground(tex: Texture2D, p: Vector2i, soft_base := false, tint := Color.WHITE) -> void:
 	if relief.is_flat_tile(p):
-		draw_texture_rect(tex, Rect2(Iso.to_screen(Vector2(p)) - Vector2(Iso.TW * 0.5, 0), Vector2(Iso.TW, Iso.TH)), false)
+		draw_texture_rect(tex, Rect2(Iso.to_screen(Vector2(p)) - Vector2(Iso.TW * 0.5, 0), Vector2(Iso.TW, Iso.TH)), false, tint)
 		return
 	# Tuile en pente : découpée en petits quads qui épousent la surface arrondie du relief, ombrés sommet
 	# par sommet (soleil en haut à gauche : une pente qui descend vers l'avant est dans l'ombre).
@@ -92,21 +101,16 @@ func _draw_ground(tex: Texture2D, p: Vector2i, soft_base := false) -> void:
 	var low := minf(minf(relief.corner(p.x, p.y), relief.corner(p.x + 1, p.y)),
 		minf(relief.corner(p.x, p.y + 1), relief.corner(p.x + 1, p.y + 1)))
 	var under: Texture2D = Art.terrain_texture(Grid.T_GRASS, p) if soft_base and low == 0.0 else null
-	# Colline sacrée : les ressauts entre terrasses montrent la roche grise, les replats le calcaire clair.
-	var cliff: Texture2D = Art.terrain_texture(Grid.T_ROCK, p) if city.grid.terrain_at(p) == Grid.T_HILL else null
 	var pos := PackedVector2Array()
 	var shades := PackedFloat32Array()
 	var alphas := PackedFloat32Array()
-	var steep := PackedFloat32Array()
 	for j in n + 1:
 		for i in n + 1:
 			var q := o + Vector2(i, j) / n
 			var h: float = relief.height_at(q)
 			pos.append(Iso.to_screen(q) - Vector2(0.0, h))
 			var g: Vector2 = relief.slope_at(q)
-			# Soleil en haut à gauche, et toute pente un peu assombrie pour que les reliefs se lisent.
-			shades.append(clampf(1.0 + (g.x * 0.9 + g.y * 0.45) * 0.01 - g.length() * 0.003, 0.58, 1.1))
-			steep.append(clampf((g.length() - 8.0) / 22.0, 0.0, 0.9))
+			shades.append(clampf(1.0 + (g.x * 0.9 + g.y * 0.45) * 0.01, 0.62, 1.12))
 			alphas.append(clampf(h / 10.0 + (relief.noise_at(q * 2.0) - 0.5) * 1.4, 0.0, 1.0) if under != null else 1.0)
 	for j in n:
 		for i in n:
@@ -115,19 +119,15 @@ func _draw_ground(tex: Texture2D, p: Vector2i, soft_base := false) -> void:
 			var uvs := PackedVector2Array()
 			var cols := PackedColorArray()
 			var flat := PackedColorArray()
-			var rock := PackedColorArray()
 			for k in ks:
 				var f := Vector2(k % (n + 1), k / (n + 1)) / n
 				pts.append(pos[k])
 				uvs.append(_uv(f))
-				cols.append(Color(shades[k], shades[k], shades[k], alphas[k]))
+				cols.append(Color(shades[k] * tint.r, shades[k] * tint.g, shades[k] * tint.b, alphas[k]))
 				flat.append(Color(shades[k], shades[k], shades[k]))
-				rock.append(Color(shades[k], shades[k], shades[k], alphas[k] * steep[k]))
 			if under != null:
 				draw_polygon(pts, flat, uvs, under)
 			draw_polygon(pts, cols, uvs, tex)
-			if cliff != null:
-				draw_polygon(pts, rock, uvs, cliff)
 
 
 ## Une tuile au bord de l'eau : elle-même ou l'une de ses 8 voisines est de l'autre nature (eau ou terre).
@@ -242,7 +242,8 @@ func _draw_road(p: Vector2i, r: int) -> void:
 	var tex := Art.texture("roads", "road_%d" % mask)
 	var c: Vector2 = relief.to_screen(Vector2(p) + Vector2(0.5, 0.5))
 	if tex != null:
-		_draw_ground(tex, p)
+		# La voie sacrée qui monte sur la colline : dallage ocre, bien lisible sur le calcaire clair.
+		_draw_ground(tex, p, false, SACRED_WAY if city.grid.terrain_at(p) == Grid.T_HILL else Color.WHITE)
 	else:
 		# La forme découle des voisins : droite, virage, T ou carrefour.
 		var offsets := [Vector2(16, 8), Vector2(-16, -8), Vector2(-16, 8), Vector2(16, -8)]

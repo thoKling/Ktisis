@@ -38,6 +38,8 @@ func _setup() -> void:
 	[Planner.build_thebes, Planner.build_athenes, Planner.build_iolcos][mission].call(g.city)
 	for m in months:
 		g.city.run_months(1)
+		if g.city.needs_patron_choice():
+			g.city.choose_patron(god if god != "" else g.city.patron_options()[0]["god"])
 		g.city.festival(g.city.patron if g.city.patron != "" else g.city.mission["gods"][0])
 		Planner.develop(g.city)
 		if m % 3 == 2:

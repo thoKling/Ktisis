@@ -96,6 +96,9 @@ func _check_patron_choice(c) -> void:
 		for x in 2:
 			for y in 2:
 				eq(trial.grid.terrain_at(at + Vector2i(x, y)), Grid.T_HILL, "%s : présent sur la colline" % m["id"])
+		# Les monuments réservés à une étape plus tardive doivent aussi trouver leur place, une fois débloqués.
+		for id in m.get("locked_until", {}):
+			trial.stage = maxi(trial.stage, int(m["locked_until"][id]))
 		for id in m["buildings"]:
 			if c.catalog.building(id).get("on", "") == "hill" and trial.is_available(id):
 				check(_somewhere(trial, id), "%s : place pour %s sur la colline" % [m["id"], id])

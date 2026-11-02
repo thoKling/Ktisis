@@ -3,7 +3,10 @@ extends RefCounted
 ## Ce n'est pas une IA de jeu : un quadrillage de rues, des services, puis l'industrie là où le terrain le permet.
 
 const City = preload("res://src/domain/city.gd")
+const Objectives = preload("res://src/domain/systems/objectives.gd")
 const Grid = preload("res://src/domain/world/grid.gd")
+## Athènes : emplacement gardé libre pour le grand temple de l'Acropole (5 x 5, au bord de la voie sacrée).
+const TEMPLE_SITE := Rect2i(33, 27, 5, 7)
 
 
 ## Quadrillage de rues : colonnes tous les 7 cases à partir de x0, lignes aux ordonnées ys.
@@ -156,7 +159,7 @@ static func build_athenes(c: City) -> bool:
 	c.place_road_path(Grid.l_path(Vector2i(13, c.entry.y), Vector2i(13, 37)))
 	# La voie panathénaïque monte sur la colline par le sud, face à la ville.
 	c.place_road_path(Grid.l_path(Vector2i(13, 41), Vector2i(32, 41)))
-	c.place_road_path(Grid.l_path(Vector2i(32, 41), Vector2i(32, 30)))
+	c.place_road_path(Grid.l_path(Vector2i(32, 41), Vector2i(32, 26)))
 	h += district(c, 13, 5, [37, 44], [
 		["agora", "fountain", a], ["granary", "fountain", "guard_post"], ["fountain", "tax_office", p],
 		["fountain", "guard_post"], ["agora", "fountain", a]], 40)
@@ -194,6 +197,11 @@ static func wishlist(c: City) -> Array:
 
 
 static func develop(c: City, keep: int = 200) -> void:
+	# Étape des terrasses sacrées : tout va d'abord à l'embellissement de la colline.
+	for o in Objectives.current(c):
+		if o["type"] == "terrain_beauty" and Objectives.terrain_beauty(c, Grid.TERRAIN_NAMES[o["terrain"]]) < float(o["value"]):
+			adorn_terrain(c, Grid.TERRAIN_NAMES[o["terrain"]], keep)
+			return
 	for item in wishlist(c):
 		var type: String = item[0]
 		var have := 0
@@ -204,14 +212,38 @@ static func develop(c: City, keep: int = 200) -> void:
 			continue
 		if c.money < int(c.catalog.building(type)["cost"]) + keep:
 			return
-		if c.catalog.building(type).get("on", "") == "hill":
-			place_in(c, type, Vector2i.ZERO, Vector2i(c.grid.width, c.grid.height))
+		if type == "propylaea":
+			# La porte de l'Acropole, en haut de la rampe, du côté de la ville.
+			place_in(c, type, Vector2i(28, 30), Vector2i(32, 35))
+		elif c.catalog.building(type).get("on", "") == "hill":
+			place_in(c, type, TEMPLE_SITE.position, TEMPLE_SITE.end)
 		elif type == "guard_post":
 			var y0: int = c.entry.y
 			place_in(c, type, Vector2i(6, y0 - 18), Vector2i(42, y0 + 19))
 		else:
 			place_linked(c, type, 1, 30)
 		return
+
+
+## Jardins, statues et places sur les terrasses d'un terrain (près de ses bords : le sommet reste aux monuments).
+static func adorn_terrain(c: City, kind: int, keep: int) -> int:
+	var n := 0
+	for type in ["statue", "plaza", "garden"]:
+		if not c.is_available(type):
+			continue
+		var s: int = c.catalog.building(type)["size"]
+		for y in range(1, c.grid.height - s):
+			for x in range(1, c.grid.width - s):
+				if c.money < int(c.catalog.building(type)["cost"]) + keep:
+					return n
+				var p := Vector2i(x, y)
+				if c.grid.terrain_at(p) != kind or not c.grid.touches_terrain(p, s, Grid.T_ROCK, 2):
+					continue
+				if Rect2i(p, Vector2i(s, s)).intersects(TEMPLE_SITE):
+					continue
+				if c.place(type, p) == "":
+					n += 1
+	return n
 
 
 ## En cours de partie : dépense le surplus en jardins et places autour des maisons les moins belles.
