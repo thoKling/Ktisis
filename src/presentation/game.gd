@@ -36,6 +36,7 @@ var _stage_shown := 0
 var _pan_drag := false
 
 var relief
+var _relief_version := -1
 var terrain_layer
 var object_layer
 var camera: Camera2D
@@ -52,7 +53,7 @@ func setup(index: int, loaded_city = null) -> void:
 
 
 func _ready() -> void:
-	relief = Relief.new(city.grid)
+	_rebuild_relief()
 	terrain_layer = TerrainLayer.new()
 	terrain_layer.city = city
 	terrain_layer.relief = relief
@@ -80,6 +81,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_pan(delta)
+	if city.map_version != _relief_version:
+		_rebuild_relief()
 	if speed > 0:
 		_acc += delta * TICKS_PER_SECOND * speed
 		var n := 0
@@ -324,3 +327,15 @@ func festival(god: String) -> void:
 
 func back_to_menu() -> void:
 	quit_to_menu.emit()
+
+
+## Le relief dépend aussi des monuments de la colline (leur emprise est aplanie) : refait quand la carte change.
+func _rebuild_relief() -> void:
+	_relief_version = city.map_version
+	var platforms := []
+	for b in city.buildings.values():
+		if b.def.get("on", "") == "hill":
+			platforms.append([b.pos, b.size])
+	relief = Relief.new(city.grid, platforms)
+	if terrain_layer != null:
+		terrain_layer.relief = relief

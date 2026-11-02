@@ -1,7 +1,8 @@
 extends RefCounted
 ## Relief à l'écran : la colline sacrée domine la ville, les rochers forment des montagnes.
 ## Purement visuel (la simulation reste plate). Chaque coin de tuile a une hauteur en pixels, la plus basse
-## des quatre tuiles qui s'y touchent : colline 44 px ; rocher de plus en plus haut vers le cœur du massif
+## des quatre tuiles qui s'y touchent : colline en terrasses (HILL_TIERS, un palier toutes les deux tuiles
+## d'éloignement du bord : une pente, puis un replat) ; rocher de plus en plus haut vers le cœur du massif
 ## (ROCK_STEP par tuile d'éloignement du bord, jusqu'à ROCK_MAX_STEPS), avec un peu d'irrégularité.
 ## Entre les coins, la surface est une interpolation cubique monotone (pentes arrondies, sans dépassement :
 ## ce qui est plat le reste) et les pentes reçoivent un léger bruit, pour ne pas paraître taillées au cordeau.
@@ -9,7 +10,8 @@ extends RefCounted
 const Grid = preload("res://src/domain/world/grid.gd")
 const Iso = preload("res://src/presentation/view/iso.gd")
 
-const HILL_PX := 44.0
+## Hauteur des terrasses de la colline sacrée, du bas vers le sommet.
+const HILL_TIERS := [22.0, 42.0, 60.0]
 const ROCK_STEP := 16.0
 const ROCK_MAX_STEPS := 3
 const CORNER_JITTER := 5.0
@@ -26,22 +28,44 @@ var tan_y := PackedFloat32Array()
 var max_px := 0.0
 
 
-func _init(grid = null) -> void:
+## platforms : [[pos: Vector2i, size: int], ...] les monuments posés sur la colline. Leur emprise est
+## aplanie à la hauteur de sa terrasse la plus haute (un soubassement), pour qu'ils soient bien à plat.
+func _init(grid = null, platforms: Array = []) -> void:
 	if grid == null:
 		return
 	width = grid.width
 	height = grid.height
 	var tile_h := _tile_heights(grid)
+	var plat := PackedFloat32Array()
+	plat.resize(width * height)
+	plat.fill(-1.0)
+	for pl in platforms:
+		var pos: Vector2i = pl[0]
+		var sz: int = pl[1]
+		var top := 0.0
+		for y in range(pos.y, pos.y + sz):
+			for x in range(pos.x, pos.x + sz):
+				if x >= 0 and y >= 0 and x < width and y < height:
+					top = maxf(top, tile_h[y * width + x])
+		for y in range(pos.y, pos.y + sz):
+			for x in range(pos.x, pos.x + sz):
+				if x >= 0 and y >= 0 and x < width and y < height:
+					plat[y * width + x] = maxf(plat[y * width + x], top)
 	var n := (width + 1) * (height + 1)
 	corners.resize(n)
 	for cy in height + 1:
 		for cx in width + 1:
 			var h := 1e9
+			var on_plat := -1.0
 			var all_rock := true
 			for q in [Vector2i(cx - 1, cy - 1), Vector2i(cx, cy - 1), Vector2i(cx - 1, cy), Vector2i(cx, cy)]:
 				var inside: bool = q.x >= 0 and q.y >= 0 and q.x < width and q.y < height
 				h = minf(h, tile_h[q.y * width + q.x] if inside else 0.0)
+				if inside:
+					on_plat = maxf(on_plat, plat[q.y * width + q.x])
 				all_rock = all_rock and inside and grid.terrain_at(q) == Grid.T_ROCK
+			if on_plat >= 0.0:
+				h = on_plat
 			if all_rock and h > 0.0:
 				h = maxf(h + (_hash(cx, cy, 7) - 0.5) * 2.0 * CORNER_JITTER, 2.0)
 			corners[cy * (width + 1) + cx] = h
@@ -57,18 +81,34 @@ func _init(grid = null) -> void:
 			tan_y[cy * (width + 1) + cx] = _tangent(c - corner(cx, cy - 1), corner(cx, cy + 1) - c)
 
 
-## Hauteur propre à chaque tuile : colline, ou rocher selon la distance au bord du massif.
+## Hauteur propre à chaque tuile : terrasses de la colline, ou rocher selon la distance au bord du massif.
 func _tile_heights(grid) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	out.resize(width * height)
+	var rock_d := _distance_inside(grid, Grid.T_ROCK)
+	var hill_d := _distance_inside(grid, Grid.T_HILL)
+	for y in height:
+		for x in width:
+			var i := y * width + x
+			var t: int = grid.terrain_at(Vector2i(x, y))
+			if t == Grid.T_HILL:
+				out[i] = HILL_TIERS[mini((hill_d[i] - 1) / 2, HILL_TIERS.size() - 1)]
+			elif t == Grid.T_ROCK:
+				out[i] = ROCK_STEP * mini(rock_d[i], ROCK_MAX_STEPS)
+	return out
+
+
+## Pour chaque tuile du terrain `kind`, distance (en tuiles, diagonales comprises) à la plus proche tuile
+## d'un autre terrain : 1 au bord, 2 juste derrière... ; 0 pour les autres tuiles.
+func _distance_inside(grid, kind: int) -> PackedInt32Array:
 	var dist := PackedInt32Array()
 	dist.resize(width * height)
 	var queue: Array[Vector2i] = []
 	for y in height:
 		for x in width:
-			var t: int = grid.terrain_at(Vector2i(x, y))
-			dist[y * width + x] = 0 if t != Grid.T_ROCK else 1 << 20
-			if t != Grid.T_ROCK:
+			var inside: bool = grid.terrain_at(Vector2i(x, y)) == kind
+			dist[y * width + x] = 1 << 20 if inside else 0
+			if not inside:
 				queue.append(Vector2i(x, y))
 	var head := 0
 	while head < queue.size():
@@ -83,15 +123,10 @@ func _tile_heights(grid) -> PackedFloat32Array:
 				if dist[q.y * width + q.x] > d + 1:
 					dist[q.y * width + q.x] = d + 1
 					queue.append(q)
-	for y in height:
-		for x in width:
-			var t: int = grid.terrain_at(Vector2i(x, y))
-			if t == Grid.T_HILL:
-				out[y * width + x] = HILL_PX
-			elif t == Grid.T_ROCK:
-				# Les rochers sans voisin plat sur toute la carte (cas limite) restent à la hauteur maximale.
-				out[y * width + x] = ROCK_STEP * mini(dist[y * width + x], ROCK_MAX_STEPS)
-	return out
+	for i in dist.size():
+		if dist[i] >= 1 << 20:
+			dist[i] = 99   # massif sans bord sur la carte (cas limite)
+	return dist
 
 
 static func _tangent(left: float, right: float) -> float:
