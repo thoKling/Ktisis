@@ -151,8 +151,8 @@ def dots(img, origin, rnd, count, colors, r=(1, 2)):
 
 # --------------------------------------------------------------------------- sols
 
-def grass(name="0", base=("#869548", "#93a252", "#9fad5a", "#aab463"), seed=1, flowers=("#f1e6c4", "#d9c34f"),
-          blade=("#6c7b3a", "#5d6c31", "#b9c26f"), nflowers=40):
+def grass(name="0", base=("#73803d", "#7e8b46", "#88944d", "#929a55"), seed=1, flowers=("#f1e6c4", "#d9c34f"),
+          blade=("#5c6931", "#4f5c2a", "#9fa65f"), nflowers=40):
     u, v, origin, size = patch_coords()
     col = paint(u, v, list(base), Field(5, seed), contrast=1.1)
     shade = Field(3, seed + 50)(u, v)[..., None]
@@ -165,8 +165,8 @@ def grass(name="0", base=("#869548", "#93a252", "#9fad5a", "#aab463"), seed=1, f
 
 
 def meadow():
-    grass("4", base=("#a9b45a", "#b9c164", "#c8c873", "#d2c77a"), seed=4,
-          blade=("#94a04a", "#c9c27a", "#e0d68c"), flowers=("#f4ecd0", "#e4b84b", "#c96a8a"), nflowers=160)
+    grass("4", base=("#9da753", "#acb35d", "#baba6a", "#c3b971"), seed=4,
+          blade=("#899444", "#bab471", "#d0c782"), flowers=("#f4ecd0", "#e4b84b", "#c96a8a"), nflowers=160)
 
 
 def forest_floor():
@@ -174,13 +174,74 @@ def forest_floor():
           blade=("#46582a", "#3f5026", "#82924c"), flowers=("#9a8355",), nflowers=60)
 
 
+def stones(img, origin, rnd, count, colors, r=(1.0, 2.5), area=None):
+    """Cailloux en relief : ombre portée en bas à droite, face éclairée, reflet en haut à gauche."""
+    d = ImageDraw.Draw(img)
+    pts = [(rnd.uniform(0, K), rnd.uniform(0, K)) for _ in range(count)]
+    for k, (u, v) in enumerate(wrapped(pts)):
+        if area is not None and not area(u % K, v % K):
+            continue
+        c = np.array(colors[(k // 9) % len(colors)], np.float32)
+        x, y = to_px(u, v, origin)
+        rr = r[0] + (r[1] - r[0]) * ((k // 9) * 0.6180339 % 1.0)
+        rr *= SS
+        sq = 0.55 + ((k // 9) * 0.381966 % 1.0) * 0.2
+        n = 7
+        poly = []
+        for j in range(n):
+            a = 2 * math.pi * j / n + (k // 9) * 0.7
+            f = 0.75 + ((k // 9 * 7 + j) * 0.6180339 % 1.0) * 0.45
+            poly.append((x + math.cos(a) * rr * f, y + math.sin(a) * rr * f * sq - rr * 0.25))
+        sh = [(px + rr * 0.35, py + rr * 0.3) for (px, py) in poly]
+        d.polygon(sh, fill=tuple(int(v) for v in c * 0.55))
+        d.polygon(poly, fill=tuple(int(v) for v in c))
+        d.polygon([(x - rr * 0.55, y - rr * 0.45), (x + rr * 0.1, y - rr * 0.7), (x - rr * 0.05, y - rr * 0.25)],
+                  fill=tuple(int(min(255, v)) for v in c * 1.18))
+
+
+def cracks(img, origin, rnd, count, dark, light, length=(4, 9), segs=4):
+    """Fissures brisées, soulignées d'un liseré clair au-dessus (soleil en haut à gauche)."""
+    d = ImageDraw.Draw(img)
+    pts = [(rnd.uniform(0, K), rnd.uniform(0, K)) for _ in range(count)]
+    for k, (u, v) in enumerate(wrapped(pts)):
+        x, y = to_px(u, v, origin)
+        line = [(x, y)]
+        r2 = random.Random(k // 9)
+        for _ in range(segs):
+            x += r2.uniform(*length) * SS * r2.choice((-1, 1)) * 0.6
+            y += r2.uniform(-0.45, 0.45) * r2.uniform(*length) * SS
+            line.append((x, y))
+        d.line([(a - SS * 0.7, b - SS * 0.7) for (a, b) in line], fill=light, width=SS)
+        d.line(line, fill=dark, width=SS)
+
+
 def rock_ground():
+    """Montagne : calcaire gris-ocre en strates, fissures, éboulis, lichens et touffes de maquis."""
     u, v, origin, size = patch_coords()
-    col = paint(u, v, ["#9a907d", "#ada391", "#bdb3a0", "#a59a85"], Field(5, 3), contrast=1.8)
+    col = paint(u, v, ["#857d70", "#9c9585", "#b3ab99", "#c4bca9", "#a09682"], Field(5, 3), contrast=1.7)
+    # Strates : bandes ondulées le long d'un axe, alternant ressauts clairs et joints sombres.
+    wob = Field(4, 13)(u, v)
+    t = (u * 0.55 + v * 1.0 + wob * 1.2) * 2.0
+    band = t - np.floor(t)
+    ledge = np.clip(1 - np.abs(band - 0.1) / 0.07, 0, 1)
+    joint = np.clip(1 - np.abs(band - 0.025) / 0.025, 0, 1)
+    face = np.clip((band - 0.15) / 0.85, 0, 1)
+    patchy = np.clip((Field(3, 17)(u, v) - 0.35) * 3.0, 0, 1)
+    col *= (1 + (0.16 * ledge - 0.32 * joint - 0.1 * face) * patchy)[..., None]
+    # Taches de lichen ocre et zones plus chaudes.
+    warm = np.clip((Field(4, 19)(u, v) - 0.55) * 4.0, 0, 1)[..., None]
+    col = col * (1 - warm * 0.25) + rgb("#c4a46a") * warm * 0.25
+    col *= (0.93 + Field(3, 23)(u, v) * 0.12)[..., None]
     img = Image.fromarray(np.clip(col, 0, 255).astype(np.uint8))
     rnd = random.Random(3)
-    dots(img, origin, rnd, 260, ["#8c826f", "#c9c0ad", "#7d7464"], r=(0.8, 2.2))
-    strokes(img, origin, rnd, 200, ["#7f8a48", "#8f9a52"], length=(2, 3))
+    cracks(img, origin, rnd, 45, (96, 88, 76), (214, 208, 192), length=(5, 11), segs=3)
+    dots(img, origin, rnd, 300, ["#7d7464", "#d4cbb6", "#8c826f", "#b6a585"], r=(0.5, 1.4))
+    stones(img, origin, rnd, 90, [(176, 168, 152), (150, 142, 128), (198, 190, 172), (180, 166, 138)], r=(2.2, 5.0))
+    # Maquis : touffes d'herbe sèche et petits buissons sombres.
+    scrub = Field(3, 29)
+    strokes(img, origin, rnd, 420, ["#7b8443", "#8d9050", "#a39a5c", "#6a7339"], length=(1.5, 3.5),
+            area=lambda a, b: scrub(np.array(a), np.array(b)) > 0.48)
+    stones(img, origin, rnd, 40, [(84, 98, 48), (98, 108, 56), (72, 84, 42)], r=(1.8, 3.4))
     cut_tiles(img, origin, "3")
 
 

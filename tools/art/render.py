@@ -10,6 +10,7 @@ from buildings import BUILDINGS, PROPS, WALKERS  # noqa: E402
 import houses  # noqa: E402,F401  (enregistre les maisons)
 import details  # noqa: E402,F401  (seconde passe de détails)
 import acropolis  # noqa: E402,F401  (monuments de la colline sacrée)
+import mountains  # noqa: E402,F401  (rochers de montagne, remplacent les anciens)
 import storage  # noqa: E402  (grenier et entrepôt à cases, et leurs cases pleines)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

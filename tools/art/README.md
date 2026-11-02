@@ -21,6 +21,8 @@ python3.13 -m venv ~/bvenv
 python3 tools/art/ui.py                            # habillage de l'interface (numpy + Pillow suffisent)
 ```
 
+Les rochers de montagne (`rock_0` à `rock_5` : escarpement, deux pitons, croupe, en calcaire gris puis ocre) sont dans `mountains.py` : piliers de calcaire en strates faits d'enveloppes convexes, éboulis, maquis, cyprès et oliviers sauvages.
+
 Les monuments de l'Acropole (Propylées, Parthénon, temple de Poséidon, olivier sacré, source de Poséidon) sont dans `acropolis.py`, avec leurs étapes de chantier (`<id>_s0`, `_s1`...).
 
 Pour ajouter un bâtiment : une fonction décorée `@building("<id>", taille)` dans `buildings.py`. Repère : 1 unité = 1 tuile, `tbox`/`cyl`/... prennent des coordonnées de tuiles (x vers le bas-droite de l'écran, y vers le bas-gauche) ; les faces visibles sont en x max et y max.

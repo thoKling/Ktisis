@@ -235,22 +235,8 @@ def pine(tx, ty, s=1.0, seed=0):
              0.15 * s, leaf, seed=seed * 3 + k, sz=0.06 * s)
 
 
-def _rocks(seed):
-    rnd = random.Random(seed)
-    stone = M("rocher", color="#b3aa98", noise=0.12, scale=12, bump=0.6)
-    dark = M("rocher_sombre", color="#958b78", noise=0.12, scale=12, bump=0.6)
-    for k in range(rnd.randint(3, 5)):
-        x, y = rnd.uniform(0.2, 0.8), rnd.uniform(0.2, 0.8)
-        r = rnd.uniform(0.1, 0.22)
-        blob(x, y, r * 0.25, r, rnd.choice([stone, dark]), seed=seed * 5 + k, sz=r * rnd.uniform(0.6, 1.1), lumps=0.3)
-    if rnd.random() < 0.6:
-        bush(rnd.uniform(0.2, 0.8), rnd.uniform(0.6, 0.9), 0, 0.7, seed=seed, color="olive")
-
-
 for _i in range(4):
     PROPS["forest_%d" % _i] = ((lambda i: lambda: _forest(i))(_i), 1)
-for _i in range(3):
-    PROPS["rock_%d" % _i] = ((lambda i: lambda: _rocks(i + 11))(_i), 1)
 
 
 # --------------------------------------------------------------------------- services, beauté

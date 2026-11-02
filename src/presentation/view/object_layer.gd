@@ -6,6 +6,8 @@ const Art = preload("res://src/presentation/view/art.gd")
 const Grid = preload("res://src/domain/world/grid.gd")
 const Rules = preload("res://src/domain/rules.gd")
 const StorageView = preload("res://src/presentation/view/storage_view.gd")
+## Rochers : 3 formes (escarpement, deux pitons, croupe) x 2 teintes (calcaire gris, ocre).
+const ROCK_SHAPES := 3
 
 var game
 
@@ -54,7 +56,13 @@ func _add_props(city, items: Array) -> void:
 			if city.grid.road_at(p) != 0 or city.building_at(p) != null:
 				continue
 			var h: int = x * 7 + y * 13 + (x * y) % 5
-			var tex: Texture2D = Art.texture("props", "forest_%d" % (h % 4)) if t == Grid.T_FOREST else Art.texture("props", "rock_%d" % (h % 3))
+			var tex: Texture2D
+			if t == Grid.T_FOREST:
+				tex = Art.texture("props", "forest_%d" % (h % 4))
+			else:
+				# La teinte change par massifs de quelques tuiles, pas d'une tuile à l'autre.
+				var tone: int = ((x / 6) * 5 + (y / 6) * 3) % 2
+				tex = Art.texture("props", "rock_%d" % (tone * ROCK_SHAPES + h % ROCK_SHAPES))
 			if tex != null:
 				items.append([float(x + y + 2) - 0.5, 2, tex, p])
 

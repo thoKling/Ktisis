@@ -13,11 +13,11 @@ const OLIVE := Color("#7d8a3e")
 const AEGEAN := Color("#2f6f9f")
 
 const TERRAIN_COLORS := {
-	Grid.T_GRASS: Color("#a3ad6c"),
+	Grid.T_GRASS: Color("#8d9660"),
 	Grid.T_WATER: Color("#3d78a8"),
 	Grid.T_FOREST: Color("#5f7a3c"),
 	Grid.T_ROCK: Color("#a59d90"),
-	Grid.T_MEADOW: Color("#bcc76a"),
+	Grid.T_MEADOW: Color("#afb963"),
 	Grid.T_HILL: Color("#d6c7a2"),
 }
 const ROAD_COLOR := Color("#d8c39a")
