@@ -5,6 +5,9 @@ const Grid = preload("res://src/domain/world/grid.gd")
 const Iso = preload("res://src/presentation/view/iso.gd")
 const Art = preload("res://src/presentation/view/art.gd")
 
+## Une tuile en pente est dessinée en SLOPE_SUBDIV x SLOPE_SUBDIV quads.
+const SLOPE_SUBDIV := 4
+
 var city
 var relief
 var overlay := ""   # "", "beauty"
@@ -50,7 +53,7 @@ func _draw_tile(p: Vector2i) -> void:
 		# Les flancs de la colline sont des falaises de calcaire : seul le plateau est lisse.
 		tex = Art.terrain_texture(Grid.T_ROCK, p)
 	if tex != null:
-		_draw_ground(tex, p)
+		_draw_ground(tex, p, t == Grid.T_ROCK or t == Grid.T_HILL)
 		if t == Grid.T_WATER:
 			_draw_shores(p)
 	else:
@@ -72,18 +75,45 @@ func _level(p: Vector2i) -> bool:
 
 
 ## Une texture de sol (ou de route) posée sur la tuile p : à plat, ou épousant le relief.
-func _draw_ground(tex: Texture2D, p: Vector2i) -> void:
+func _draw_ground(tex: Texture2D, p: Vector2i, soft_base := false) -> void:
 	if relief.is_flat_tile(p):
 		draw_texture_rect(tex, Rect2(Iso.to_screen(Vector2(p)) - Vector2(Iso.TW * 0.5, 0), Vector2(Iso.TW, Iso.TH)), false)
 		return
-	var pts: PackedVector2Array = relief.diamond(Vector2(p))
-	# Soleil en haut à gauche : une pente qui descend vers l'avant (x ou y croissant) est dans l'ombre.
-	var hx: float = relief.corner(p.x + 1, p.y) + relief.corner(p.x + 1, p.y + 1) - relief.corner(p.x, p.y) - relief.corner(p.x, p.y + 1)
-	var hy: float = relief.corner(p.x, p.y + 1) + relief.corner(p.x + 1, p.y + 1) - relief.corner(p.x, p.y) - relief.corner(p.x + 1, p.y)
-	var shade := clampf(1.0 + (hx * 0.9 + hy * 0.45) * 0.006, 0.55, 1.15)
-	var col := Color(shade, shade, shade)
-	draw_polygon(pts, PackedColorArray([col, col, col, col]),
-		PackedVector2Array([Vector2(0.5, 0.0), Vector2(1.0, 0.5), Vector2(0.5, 1.0), Vector2(0.0, 0.5)]), tex)
+	# Tuile en pente : découpée en petits quads qui épousent la surface arrondie du relief, ombrés sommet
+	# par sommet (soleil en haut à gauche : une pente qui descend vers l'avant est dans l'ombre).
+	# Au pied d'une pente, l'herbe passe sous la roche et la roche s'efface par endroits : pas de bord net.
+	var n := SLOPE_SUBDIV
+	var o := Vector2(p)
+	var low := minf(minf(relief.corner(p.x, p.y), relief.corner(p.x + 1, p.y)),
+		minf(relief.corner(p.x, p.y + 1), relief.corner(p.x + 1, p.y + 1)))
+	var under: Texture2D = Art.terrain_texture(Grid.T_GRASS, p) if soft_base and low == 0.0 else null
+	var pos := PackedVector2Array()
+	var shades := PackedFloat32Array()
+	var alphas := PackedFloat32Array()
+	for j in n + 1:
+		for i in n + 1:
+			var q := o + Vector2(i, j) / n
+			var h: float = relief.height_at(q)
+			pos.append(Iso.to_screen(q) - Vector2(0.0, h))
+			var g: Vector2 = relief.slope_at(q)
+			shades.append(clampf(1.0 + (g.x * 0.9 + g.y * 0.45) * 0.01, 0.62, 1.12))
+			alphas.append(clampf(h / 10.0 + (relief.noise_at(q * 2.0) - 0.5) * 1.4, 0.0, 1.0) if under != null else 1.0)
+	for j in n:
+		for i in n:
+			var ks := [j * (n + 1) + i, j * (n + 1) + i + 1, (j + 1) * (n + 1) + i + 1, (j + 1) * (n + 1) + i]
+			var pts := PackedVector2Array()
+			var uvs := PackedVector2Array()
+			var cols := PackedColorArray()
+			var flat := PackedColorArray()
+			for k in ks:
+				var f := Vector2(k % (n + 1), k / (n + 1)) / n
+				pts.append(pos[k])
+				uvs.append(Vector2(0.5 + (f.x - f.y) * 0.5, (f.x + f.y) * 0.5))
+				cols.append(Color(shades[k], shades[k], shades[k], alphas[k]))
+				flat.append(Color(shades[k], shades[k], shades[k]))
+			if under != null:
+				draw_polygon(pts, flat, uvs, under)
+			draw_polygon(pts, cols, uvs, tex)
 
 
 ## Sable et écume sur les bords d'une tuile d'eau qui touchent la terre.
