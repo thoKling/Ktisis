@@ -8,7 +8,7 @@
   ],
   "tips": [
     "La mission se joue en quatre étapes : le choix du dieu protecteur vient à la troisième.",
-    "La colline sacrée, au centre, ne reçoit que les routes et les monuments de l'Acropole. On y monte par l'ouest.",
+    "La colline sacrée, au centre, ne reçoit que les routes et les monuments de l'Acropole. On y monte par le sud, face à la ville.",
     "Le marbre vient des carrières du Pentélique, au nord-est ; le bois, des forêts du Parnès et de l'Hymette.",
     "Les oliveraies veulent la plaine fertile du Céphise, à l'ouest ; les quais de pêche, la baie du Pirée et de Phalère."
   ],
@@ -218,12 +218,12 @@
         "terrain": "hill",
         "shape": "rect",
         "from": [
-          22,
-          28
+          30,
+          33
         ],
         "to": [
-          26,
-          32
+          34,
+          39
         ]
       },
       {

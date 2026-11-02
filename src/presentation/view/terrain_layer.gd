@@ -7,6 +7,11 @@ const Art = preload("res://src/presentation/view/art.gd")
 
 ## Une tuile en pente est dessinée en SLOPE_SUBDIV x SLOPE_SUBDIV quads.
 const SLOPE_SUBDIV := 4
+## Une tuile de rivage est dessinée en COAST_SUBDIV x COAST_SUBDIV quads.
+const COAST_SUBDIV := 6
+const SAND := Color("#d9c48f")
+const FOAM := Color("#eef4f2")
+const SHALLOW := Color("#79b9cc")
 
 var city
 var relief
@@ -52,11 +57,19 @@ func _draw_tile(p: Vector2i) -> void:
 	if t == Grid.T_HILL and not _level(p):
 		# Les flancs de la colline sont des falaises de calcaire : seul le plateau est lisse.
 		tex = Art.terrain_texture(Grid.T_ROCK, p)
-	if tex != null:
+	var coast: bool = tex != null and _is_coast(p) and relief.is_flat_tile(p)
+	if coast:
+		# Sans le losange élargi des textures : il déborderait sur la tuile voisine, de l'autre nature.
+		var d := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)])
+		var uv := PackedVector2Array()
+		for f in d:
+			uv.append(_uv(f))
+		draw_polygon(poly, PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]), uv, tex)
+	elif tex != null:
 		_draw_ground(tex, p, t == Grid.T_ROCK or t == Grid.T_HILL)
-		if t == Grid.T_WATER:
-			_draw_shores(p)
-	else:
+	if coast:
+		_draw_coast(p)
+	if tex == null:
 		draw_colored_polygon(poly, base)
 		if t == Grid.T_FOREST:
 			var c: Vector2 = relief.to_screen(Vector2(p) + Vector2(0.5, 0.5))
@@ -108,7 +121,7 @@ func _draw_ground(tex: Texture2D, p: Vector2i, soft_base := false) -> void:
 			for k in ks:
 				var f := Vector2(k % (n + 1), k / (n + 1)) / n
 				pts.append(pos[k])
-				uvs.append(Vector2(0.5 + (f.x - f.y) * 0.5, (f.x + f.y) * 0.5))
+				uvs.append(_uv(f))
 				cols.append(Color(shades[k], shades[k], shades[k], alphas[k]))
 				flat.append(Color(shades[k], shades[k], shades[k]))
 			if under != null:
@@ -116,7 +129,102 @@ func _draw_ground(tex: Texture2D, p: Vector2i, soft_base := false) -> void:
 			draw_polygon(pts, cols, uvs, tex)
 
 
-## Sable et écume sur les bords d'une tuile d'eau qui touchent la terre.
+## Une tuile au bord de l'eau : elle-même ou l'une de ses 8 voisines est de l'autre nature (eau ou terre).
+func _is_coast(p: Vector2i) -> bool:
+	var w := _wet(p)
+	for dy in [-1, 0, 1]:
+		for dx in [-1, 0, 1]:
+			if _wet(p + Vector2i(dx, dy)) != w:
+				return true
+	return false
+
+
+## Eau ou pas ; hors de la carte, on prolonge la case du bord la plus proche.
+func _wet(q: Vector2i) -> bool:
+	var g = city.grid
+	q = Vector2i(clampi(q.x, 0, g.width - 1), clampi(q.y, 0, g.height - 1))
+	return g.terrain_at(q) == Grid.T_WATER
+
+
+## Part d'eau en un coin de tuile : 0, 1/4, 1/2, 3/4 ou 1 selon les quatre tuiles qui s'y touchent.
+func _corner_wet(cx: int, cy: int) -> float:
+	var n := 0
+	for q in [Vector2i(cx - 1, cy - 1), Vector2i(cx, cy - 1), Vector2i(cx - 1, cy), Vector2i(cx, cy)]:
+		if _wet(q):
+			n += 1
+	return n * 0.25
+
+
+## Rivage arrondi : la ligne d'eau suit la courbe où la part d'eau, lissée entre les coins et un peu
+## bruitée, vaut 1/2. Les angles des tuiles sont donc coupés en biais ou comblés, pas en escalier.
+## Couches : sable sur la terre, eau, eau claire du haut-fond, puis un liseré d'écume.
+func _draw_coast(p: Vector2i) -> void:
+	var n := COAST_SUBDIV
+	var o := Vector2(p)
+	var c00 := _corner_wet(p.x, p.y)
+	var c10 := _corner_wet(p.x + 1, p.y)
+	var c01 := _corner_wet(p.x, p.y + 1)
+	var c11 := _corner_wet(p.x + 1, p.y + 1)
+	var water: Texture2D = Art.terrain_texture(Grid.T_WATER, p)
+	var land: Texture2D = Art.terrain_texture(Grid.T_GRASS, p)
+	var on_water := _wet(p)
+	var pos := PackedVector2Array()
+	var wet := PackedFloat32Array()
+	for j in n + 1:
+		for i in n + 1:
+			var f := Vector2(i, j) / n
+			var sx := f.x * f.x * (3.0 - 2.0 * f.x)
+			var sy := f.y * f.y * (3.0 - 2.0 * f.y)
+			var v := lerpf(lerpf(c00, c10, sx), lerpf(c01, c11, sx), sy)
+			v += (relief.noise_at((o + f) * 2.5) - 0.5) * 0.16
+			pos.append(Iso.to_screen(o + f))
+			wet.append(v)
+	for j in n:
+		for i in n:
+			var ks := [j * (n + 1) + i, j * (n + 1) + i + 1, (j + 1) * (n + 1) + i + 1, (j + 1) * (n + 1) + i]
+			var pts := PackedVector2Array()
+			var uvs := PackedVector2Array()
+			var lo := 9.0
+			var hi := -9.0
+			for k in ks:
+				var f := Vector2(k % (n + 1), k / (n + 1)) / n
+				pts.append(pos[k])
+				uvs.append(_uv(f))
+				lo = minf(lo, wet[k])
+				hi = maxf(hi, wet[k])
+			if hi < 0.3 and not on_water:
+				continue
+			if on_water and lo > 0.85:
+				continue
+			if lo > 0.85:
+				draw_polygon(pts, _cols(ks, wet, func(_v): return Color.WHITE), uvs, water)
+				continue
+			if on_water:
+				# Tuile d'eau : la terre et le sable recouvrent la partie sèche.
+				draw_polygon(pts, _cols(ks, wet, func(v): return Color(1, 1, 1, 1.0 - smoothstep(0.46, 0.52, v))), uvs, land)
+				draw_polygon(pts, _cols(ks, wet, func(v): return Color(SAND, smoothstep(0.3, 0.44, v) * (1.0 - smoothstep(0.46, 0.52, v)))), uvs)
+			else:
+				# Tuile de terre : le sable puis l'eau gagnent la partie mouillée.
+				draw_polygon(pts, _cols(ks, wet, func(v): return Color(SAND, smoothstep(0.3, 0.44, v))), uvs)
+				draw_polygon(pts, _cols(ks, wet, func(v): return Color(1, 1, 1, smoothstep(0.46, 0.52, v))), uvs, water)
+			draw_polygon(pts, _cols(ks, wet, func(v): return Color(SHALLOW, smoothstep(0.46, 0.52, v) * 0.45 * (1.0 - smoothstep(0.55, 0.85, v)))), uvs)
+			draw_polygon(pts, _cols(ks, wet, func(v): return Color(FOAM, 0.8 * clampf(1.0 - absf(v - 0.53) / 0.05, 0.0, 1.0))), uvs)
+
+
+## Coordonnées de texture d'un point (fx, fy) de la tuile, un peu resserrées vers le centre : le bord des
+## textures de sol est fondu (losange élargi), il ne faut pas l'échantillonner entre deux petits quads.
+static func _uv(f: Vector2) -> Vector2:
+	return Vector2(0.5, 0.5) + (Vector2(0.5 + (f.x - f.y) * 0.5, (f.x + f.y) * 0.5) - Vector2(0.5, 0.5)) * 0.97
+
+
+func _cols(ks: Array, wet: PackedFloat32Array, fn: Callable) -> PackedColorArray:
+	var out := PackedColorArray()
+	for k in ks:
+		out.append(fn.call(wet[k]))
+	return out
+
+
+## Sable et écume sur les bords d'une tuile d'eau qui touchent la terre (ancien rivage, plus utilisé).
 func _draw_shores(p: Vector2i) -> void:
 	var dirs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 	for i in 4:

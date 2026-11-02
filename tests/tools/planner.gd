@@ -154,8 +154,9 @@ static func build_athenes(c: City) -> bool:
 		["agora", "fountain", "guard_post"], ["granary", "fountain", p], ["fountain", "tax_office"],
 		["warehouse", "fountain", a], ["agora", "fountain", p], ["fountain", "granary", "guard_post"]], 60)
 	c.place_road_path(Grid.l_path(Vector2i(13, c.entry.y), Vector2i(13, 37)))
-	# La voie panathénaïque monte sur la colline par l'ouest.
-	c.place_road_path(Grid.l_path(Vector2i(13, 30), Vector2i(34, 30)))
+	# La voie panathénaïque monte sur la colline par le sud, face à la ville.
+	c.place_road_path(Grid.l_path(Vector2i(13, 41), Vector2i(32, 41)))
+	c.place_road_path(Grid.l_path(Vector2i(32, 41), Vector2i(32, 30)))
 	h += district(c, 13, 5, [37, 44], [
 		["agora", "fountain", a], ["granary", "fountain", "guard_post"], ["fountain", "tax_office", p],
 		["fountain", "guard_post"], ["agora", "fountain", a]], 40)
